@@ -16,7 +16,6 @@
 - 인증 흐름: 사이드바 통합 로그인/회원정보/로그아웃 + `/account`
 - URL 딥링크: `q`, `category`, `point`, `sheet`, `reports`
 - 지도 최적화: 커스텀 마커 유지 + 선택 오버레이/아이콘 캐시 + 단일 visible 조회
-- 운영 점검 문서/체크리스트 포함
 
 ## Key Features
 
