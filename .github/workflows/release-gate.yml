@@ -30,6 +30,29 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Prepare CI env files for predeploy checks
+        run: |
+          cat > .env.development <<'EOF'
+          NEXTAUTH_URL=http://localhost:3100
+          NEXTAUTH_SECRET=ci-development-secret-value-with-32chars-minimum
+          NEXT_PUBLIC_SUPABASE_URL=https://wrdmlvcyuaghogmhpeee.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_zFB1lttvGSfTgYUAFzg0NQ_auZ_efCq
+          ALLOW_DEV_USER_HEADER=true
+          ALLOW_DB_FALLBACK_ON_ERROR=true
+          FORCE_LOCAL_STORE=true
+          EOF
+
+          cat > .env.production <<'EOF'
+          NEXTAUTH_URL=https://ci.recyclemap.app
+          NEXTAUTH_SECRET=ci-production-secret-value-with-32chars-minimum-2026
+          NEXT_PUBLIC_SUPABASE_URL=https://wrdmlvcyuaghogmhpeee.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_zFB1lttvGSfTgYUAFzg0NQ_auZ_efCq
+          ALLOW_DEV_USER_HEADER=false
+          ALLOW_DB_FALLBACK_ON_ERROR=false
+          FORCE_LOCAL_STORE=false
+          ENABLE_TEST_ACCOUNTS=false
+          EOF
+
       - name: Predeploy check (development)
         run: pnpm predeploy:check
 
@@ -46,7 +69,7 @@ jobs:
         run: pnpm security:audit
 
       - name: Install Playwright browser
-        run: pnpm exec playwright install chromium
+        run: pnpm exec playwright install --with-deps chromium
 
       - name: E2E
         run: pnpm test:e2e -- e2e/ui-local.spec.ts e2e/api-local.spec.ts
