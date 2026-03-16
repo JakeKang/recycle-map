@@ -124,6 +124,14 @@ async function measureUi(base, options) {
       () =>
         document.querySelectorAll(".leaflet-marker-icon, .leaflet-marker-shadow, .marker-cluster").length,
     );
+    const panelRenderedCount = await page.evaluate(
+      () => document.querySelectorAll('[data-testid="panel-point-item"]').length,
+    );
+    const panelSummaryText = await page
+      .locator('[data-testid="panel-list-summary"]')
+      .first()
+      .textContent()
+      .catch(() => null);
 
     const screenshotPath = path.join(rootDir, "readme-media", screenshotName);
     await page.screenshot({ path: screenshotPath, fullPage: true, type: "png" });
@@ -132,6 +140,8 @@ async function measureUi(base, options) {
       loadMs,
       uiListCount,
       markerCount,
+      panelRenderedCount,
+      panelSummaryText: panelSummaryText?.trim() ?? null,
       screenshotName,
       screenshotPath,
     };
@@ -149,7 +159,37 @@ function makeReport({ apiMetrics, uiMetrics, seed, targetUrl, notes }) {
     )
     .join("\n");
 
-  return `# Performance Smoke Report\n\nGenerated: ${generatedAt}\n\n## Scenario\n- Server: ${targetUrl}\n- Seed points: **${seed}** (env: PERF_SEED_POINTS)\n- Query: /api/points?${queryString}\n- Notes: ${notes}\n\n## API Metrics\n- Average client time: **${apiMetrics.avgClientMs} ms**\n- Average server time (header): **${apiMetrics.avgServerMs} ms**\n- Returned points: **${apiMetrics.pointsCount}**\n\n| Run | Status | Client ms | Server ms | JSON count | Header count |\n| --- | --- | ---: | ---: | ---: | ---: |\n${rows}\n\n## UI Metrics\n- Home render to stable count text: **${uiMetrics.loadMs} ms**\n- Sidebar list count at capture: **${uiMetrics.uiListCount}**\n- Leaflet marker DOM nodes observed: **${uiMetrics.markerCount}**\n- Screenshot: readme-media/${uiMetrics.screenshotName}\n\n## Interpretation\n- This smoke report validates MVP behavior under synthetic high-volume seed data without introducing production-only complexity.\n- If client/server averages regress significantly or marker flicker becomes visible, follow Step 27 escalation path (supercluster -> canvas/WebGL review).\n`;
+  return `# Performance Smoke Report
+
+Generated: ${generatedAt}
+
+## Scenario
+- Server: ${targetUrl}
+- Seed points: **${seed}** (env: PERF_SEED_POINTS)
+- Query: /api/points?${queryString}
+- Notes: ${notes}
+
+## API Metrics
+- Average client time: **${apiMetrics.avgClientMs} ms**
+- Average server time (header): **${apiMetrics.avgServerMs} ms**
+- Returned points: **${apiMetrics.pointsCount}**
+
+| Run | Status | Client ms | Server ms | JSON count | Header count |
+| --- | --- | ---: | ---: | ---: | ---: |
+${rows}
+
+## UI Metrics
+- Home render to stable count text: **${uiMetrics.loadMs} ms**
+- Sidebar list count at capture: **${uiMetrics.uiListCount}**
+- Sidebar rendered list items: **${uiMetrics.panelRenderedCount}**
+- Sidebar truncation summary: ${uiMetrics.panelSummaryText ?? "none"}
+- Leaflet marker DOM nodes observed: **${uiMetrics.markerCount}**
+- Screenshot: readme-media/${uiMetrics.screenshotName}
+
+## Interpretation
+- This smoke report validates MVP behavior under synthetic high-volume seed data without introducing production-only complexity.
+- If client/server averages regress significantly or marker flicker becomes visible, follow Step 27 escalation path (supercluster -> canvas/WebGL review).
+`;
 }
 
 async function main() {

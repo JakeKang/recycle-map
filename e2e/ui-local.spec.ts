@@ -117,4 +117,26 @@ test.describe("local UI e2e", () => {
     const createReportResponse = await createReportResponsePromise;
     expect(createReportResponse.status()).toBe(201);
   });
+
+  test("mobile map-first menu flow remains consistent", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/");
+
+    const map = page.locator(".leaflet-container:visible").first();
+    await expect(map).toBeVisible();
+
+    await page.getByRole("button", { name: "메뉴 열기" }).click();
+    await expect(page.getByRole("complementary", { name: "모바일 메뉴" })).toBeVisible();
+
+    await page.getByRole("button", { name: "시청역 폐건전지 수거함" }).first().click();
+    await expect(page.getByRole("complementary", { name: "모바일 메뉴" })).toHaveCount(0);
+    await expect.poll(() => new URL(page.url()).searchParams.get("point")).toBe("seed-1");
+
+    await expect(page.locator('aside[aria-label="포인트 상세 시트"]')).toBeVisible();
+
+    await page.getByRole("button", { name: "메뉴 열기" }).click();
+    await expect(page.getByRole("complementary", { name: "모바일 메뉴" })).toBeVisible();
+    await page.getByRole("complementary", { name: "모바일 메뉴" }).getByRole("button", { name: "메뉴 닫기" }).click();
+    await expect(page.getByRole("complementary", { name: "모바일 메뉴" })).toHaveCount(0);
+  });
 });

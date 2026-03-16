@@ -1,15 +1,14 @@
 "use client";
 
-import AuthStatus from "@/components/common/AuthStatus";
 import RecycleMapContainer from "@/components/map/MapContainer";
 import MyReportsSheet from "@/components/panel/MyReportsSheet";
 import PointDetailSheet from "@/components/panel/PointDetailSheet";
+import SidebarPanelContent from "@/components/panel/SidebarPanelContent";
 import type { MobileSnap } from "@/components/panel/PointDetailSheet";
 import RegisterPointDialog from "@/components/point/RegisterPointDialog";
 import { usePoints } from "@/hooks/usePoints";
 import {
   categoryLabel,
-  getCategoryChipStyle,
   getCategoryVisual,
 } from "@/lib/point-visuals";
 import {
@@ -17,23 +16,31 @@ import {
 } from "@/stores/mapStore";
 import { CATEGORIES, PointCategory, PointQuery } from "@/types/point";
 import {
-  ListFilter,
+  Menu,
   MapPinPlus,
   LocateFixed,
-  Search,
   X,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-
-const CATEGORY_ENTRIES = Object.entries(CATEGORIES) as Array<
-  [PointCategory, (typeof CATEGORIES)[PointCategory]]
->;
 
 const SHEET_SNAP_ORDER: MobileSnap[] = ["peek", "mid", "full"];
 
 const MANAGED_QUERY_KEYS = ["q", "category", "sort", "point", "sheet", "reports"];
 const NEARBY_RADIUS_METERS = 3500;
 const MAX_NEARBY_CARDS = 12;
+const MAX_PANEL_LIST_ITEMS = 180;
+
+function boundsCenter(nextBounds: {
+  swLat: number;
+  swLng: number;
+  neLat: number;
+  neLng: number;
+}) {
+  return {
+    lat: (nextBounds.swLat + nextBounds.neLat) / 2,
+    lng: (nextBounds.swLng + nextBounds.neLng) / 2,
+  };
+}
 
 function isCategoryOrAll(value: string | null): value is PointCategory | "all" {
   if (!value) {
@@ -117,6 +124,7 @@ export default function Home() {
   const [locationError, setLocationError] = useState<string | null>(null);
   const [isMyReportsOpen, setIsMyReportsOpen] = useState(false);
   const [isRegisterDialogOpen, setIsRegisterDialogOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [debouncedQuery, setDebouncedQuery] = useState(query);
   const didAutoLocateRef = useRef(false);
   const boundsRef = useRef(bounds);
@@ -441,6 +449,15 @@ export default function Home() {
     requestCurrentLocation({ silent: false, recenter: true });
   }, [requestCurrentLocation]);
 
+  const handleOpenRegisterFromPanel = useCallback(() => {
+    if (registrationPosition) {
+      setIsRegisterDialogOpen(true);
+      setIsMobileMenuOpen(false);
+      return;
+    }
+    setLocationError("지도를 클릭해 위치를 선택한 뒤 등록해 주세요.");
+  }, [registrationPosition]);
+
   const handleBoundsChange = useCallback(
     (nextBounds: { swLat: number; swLng: number; neLat: number; neLng: number }) => {
       if (isSameBounds(boundsRef.current, nextBounds)) {
@@ -461,6 +478,7 @@ export default function Home() {
   );
 
   const handlePointSelect = useCallback((pointId: string) => {
+    setIsMobileMenuOpen(false);
     setIsMyReportsOpen(false);
     setSelectedPointId(pointId);
     setSheetSnap("mid");
@@ -468,6 +486,7 @@ export default function Home() {
   }, []);
 
   const handleOpenMyReports = useCallback(() => {
+    setIsMobileMenuOpen(false);
     setIsMyReportsOpen(true);
     setSelectedPointId(null);
     setSheetSnap("mid");
@@ -502,143 +521,108 @@ export default function Home() {
   const activeCategoryLabel =
     selectedCategory === "all" ? "전체" : CATEGORIES[selectedCategory].label;
 
+  const panelListPoints = useMemo(() => {
+    if (mapPoints.length <= MAX_PANEL_LIST_ITEMS) {
+      return mapPoints;
+    }
+
+    const anchor = userLocation ?? (bounds ? boundsCenter(bounds) : null);
+    if (!anchor) {
+      return mapPoints.slice(0, MAX_PANEL_LIST_ITEMS);
+    }
+
+    return [...mapPoints]
+      .sort((a, b) => {
+        const aDistance = haversineMeters(anchor.lat, anchor.lng, a.lat, a.lng);
+        const bDistance = haversineMeters(anchor.lat, anchor.lng, b.lat, b.lng);
+        if (aDistance === bDistance) {
+          return a.id.localeCompare(b.id);
+        }
+        return aDistance - bDistance;
+      })
+      .slice(0, MAX_PANEL_LIST_ITEMS);
+  }, [bounds, mapPoints, userLocation]);
+
   return (
     <main className="h-screen overflow-hidden bg-[linear-gradient(165deg,#eef7f1_0%,#f7fbf8_55%,#edf5ef_100%)] p-3 md:p-4">
       <div className="mx-auto grid h-full max-w-[1600px] overflow-hidden rounded-3xl border border-emerald-900/15 bg-white shadow-[0_20px_50px_rgba(15,23,42,0.13)] md:grid-cols-[380px_minmax(0,1fr)]">
-        <aside className="flex h-full flex-col border-b border-emerald-900/10 bg-[linear-gradient(180deg,#ffffff_0%,#f8fbf9_100%)] md:border-b-0 md:border-r">
-          <div className="border-b border-emerald-900/10 px-4 pb-4 pt-5">
-            <div className="mb-3 flex items-center gap-2">
-              <span className="grid h-10 w-10 place-items-center rounded-xl bg-emerald-900 text-lg text-emerald-50">
-                ♻
-              </span>
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-emerald-700">RecycleMap</p>
-                <h1 className="text-base font-bold tracking-tight text-emerald-900">우리동네 자원순환 알리미</h1>
-              </div>
-            </div>
+        <aside className="hidden h-full md:flex">
+          <SidebarPanelContent
+            selectedCategory={selectedCategory}
+            onSelectCategory={setSelectedCategory}
+            query={query}
+            onQueryChange={setQuery}
+            activeCategoryLabel={activeCategoryLabel}
+            isLoading={isLoading}
+            totalCount={mapPoints.length}
+            onOpenMyReports={handleOpenMyReports}
+            onLocate={handleLocateCurrentPosition}
+            isLocating={isLocating}
+            onOpenRegister={handleOpenRegisterFromPanel}
+            listPoints={panelListPoints}
+            listTotalCount={mapPoints.length}
+            selectedPointId={selectedPointId}
+            onPointSelect={handlePointSelect}
+          />
+        </aside>
 
-            <AuthStatus />
+        <button
+          type="button"
+          onClick={() => setIsMobileMenuOpen(true)}
+          className="fixed left-4 top-4 z-[1250] inline-flex h-10 w-10 items-center justify-center rounded-xl border border-emerald-900/20 bg-white text-emerald-900 shadow-[0_8px_20px_rgba(15,23,42,0.2)] md:hidden"
+          aria-label="메뉴 열기"
+        >
+          <Menu size={18} />
+        </button>
 
-            <div className="relative">
-              <Search
-                size={15}
-                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-stone-400"
-              />
-              <input
-                className="w-full rounded-xl border border-emerald-900/15 bg-white py-2 pl-9 pr-3 text-sm text-stone-800 outline-none ring-emerald-700/30 placeholder:text-stone-400 focus:ring"
-                placeholder="주소 또는 장소명으로 검색"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-              />
-            </div>
+        {isMobileMenuOpen ? (
+          <button
+            type="button"
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="fixed inset-0 z-[1240] bg-[rgba(15,23,42,0.4)] md:hidden"
+            aria-label="메뉴 닫기"
+          />
+        ) : null}
 
-            <div className="mt-3 flex flex-wrap items-center gap-1.5">
+        {isMobileMenuOpen ? (
+          <aside
+            className="fixed inset-y-0 left-0 z-[1251] w-[88%] max-w-[380px] bg-white shadow-2xl md:hidden"
+            aria-label="모바일 메뉴"
+          >
+            <div className="flex items-center justify-between border-b border-emerald-900/10 px-4 py-3">
+              <p className="text-sm font-semibold text-emerald-900">메뉴</p>
               <button
                 type="button"
-                onClick={() => setSelectedCategory("all")}
-                className={`rounded-full px-2.5 py-1 text-[11px] font-semibold transition ${
-                  selectedCategory === "all"
-                    ? "bg-emerald-900 text-emerald-50"
-                    : "border border-emerald-900/15 bg-white text-stone-600"
-                }`}
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-emerald-900/15 bg-white text-emerald-900"
+                aria-label="메뉴 닫기"
               >
-                전체
+                <X size={14} />
               </button>
-              {CATEGORY_ENTRIES.map(([key]) => {
-                const visual = getCategoryChipStyle(key, selectedCategory === key);
-                return (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => setSelectedCategory(key)}
-                    className="rounded-full border px-2.5 py-1 text-[11px] font-semibold transition"
-                    style={visual}
-                  >
-                    {categoryLabel(key)}
-                  </button>
-                );
-              })}
             </div>
-
-            <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-stone-600">
-              <p>
-                {activeCategoryLabel} · {isLoading ? "불러오는 중" : `${mapPoints.length}개`}
-              </p>
-              <div className="flex gap-1.5">
-                <button
-                  type="button"
-                  onClick={handleOpenMyReports}
-                  className="rounded-lg border border-emerald-900/15 bg-white px-2 py-1 font-semibold text-emerald-900"
-                >
-                  내 제보
-                </button>
-                <button
-                  type="button"
-                  onClick={handleLocateCurrentPosition}
-                  className="inline-flex items-center gap-1 rounded-lg border border-emerald-900 bg-emerald-900 px-2 py-1 font-semibold text-emerald-50"
-                >
-                  <LocateFixed size={12} /> {isLocating ? "위치 확인 중" : "내 위치"}
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between px-4 py-3">
-            <span className="inline-flex items-center gap-1 text-xs font-semibold text-stone-700">
-              <ListFilter size={13} /> 수거함 목록
-            </span>
-            <button
-              type="button"
-              onClick={() => {
-                if (registrationPosition) {
-                  setIsRegisterDialogOpen(true);
-                  return;
-                }
-                setLocationError("지도를 클릭해 위치를 선택한 뒤 등록해 주세요.");
-              }}
-              className="inline-flex items-center gap-1 rounded-lg border border-emerald-900 bg-emerald-900 px-2.5 py-1.5 text-xs font-semibold text-emerald-50"
-            >
-              <MapPinPlus size={12} /> 등록하기
-            </button>
-          </div>
-
-          <div className="flex-1 space-y-1 overflow-y-auto px-3 pb-3">
-            {mapPoints.length === 0 ? (
-              <p className="rounded-xl border border-dashed border-emerald-900/20 bg-emerald-50/50 p-3 text-sm text-stone-600">
-                현재 조건에 맞는 수거함이 없습니다.
-              </p>
-            ) : (
-              mapPoints.map((point) => {
-                const visual = getCategoryVisual(point.category);
-                return (
-                  <button
-                    key={point.id}
-                    type="button"
-                    onClick={() => handlePointSelect(point.id)}
-                    className={`w-full rounded-2xl border px-3 py-3 text-left transition ${
-                      selectedPointId === point.id
-                        ? "border-emerald-900 bg-emerald-50"
-                        : "border-transparent bg-white hover:border-emerald-900/20"
-                    }`}
-                  >
-                    <p className="text-[11px] font-semibold" style={{ color: visual.textColor }}>
-                      {categoryLabel(point.category)}
-                    </p>
-                    <p className="mt-0.5 line-clamp-1 text-sm font-semibold text-stone-900">{point.title}</p>
-                    <p className="mt-0.5 line-clamp-1 text-xs text-stone-500">{point.address ?? "주소 미입력"}</p>
-                    <p className="mt-1 text-[11px] text-stone-500">
-                      평점 {point.avgRating} · 리뷰 {point.reviewCount}
-                    </p>
-                  </button>
-                );
-              })
-            )}
-          </div>
-        </aside>
+            <SidebarPanelContent
+              selectedCategory={selectedCategory}
+              onSelectCategory={setSelectedCategory}
+              query={query}
+              onQueryChange={setQuery}
+              activeCategoryLabel={activeCategoryLabel}
+              isLoading={isLoading}
+              totalCount={mapPoints.length}
+              onOpenMyReports={handleOpenMyReports}
+              onLocate={handleLocateCurrentPosition}
+              isLocating={isLocating}
+              onOpenRegister={handleOpenRegisterFromPanel}
+              listPoints={panelListPoints}
+              listTotalCount={mapPoints.length}
+              selectedPointId={selectedPointId}
+              onPointSelect={handlePointSelect}
+            />
+          </aside>
+        ) : null}
 
         <section className={`relative flex h-full min-h-0 flex-col bg-[linear-gradient(180deg,#f6faf7_0%,#eff6f1_100%)] ${selectedPointId ? "md:pr-[430px]" : ""}`}>
 
-          <div className="px-3 pb-2 pt-3 md:pt-4">
+          <div className="hidden px-3 pb-2 pt-3 md:block md:pt-4">
             <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-emerald-900/10 bg-white/90 px-3 py-2 text-xs text-stone-600">
               {registrationPosition ? (
                 <>
@@ -674,8 +658,51 @@ export default function Home() {
             ) : null}
           </div>
 
-          <div className="min-h-0 flex-1 px-3 pb-2">
-            <div className="h-full overflow-hidden rounded-2xl border border-emerald-900/12 bg-white">
+          <div className="pointer-events-none absolute inset-x-3 top-16 z-[700] md:hidden">
+            <div className="pointer-events-auto flex flex-wrap items-center gap-1.5 rounded-xl border border-emerald-900/10 bg-white/90 px-2.5 py-2 text-[11px] text-stone-600 shadow-[0_6px_18px_rgba(15,23,42,0.14)]">
+              {registrationPosition ? (
+                <>
+                  <span className="rounded-md border border-emerald-900/15 bg-emerald-50 px-2 py-1 text-[11px] text-emerald-900">
+                    {registrationPosition.lat.toFixed(4)}, {registrationPosition.lng.toFixed(4)}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setIsRegisterDialogOpen(true)}
+                    className="inline-flex items-center gap-1 rounded-lg border border-emerald-900 bg-emerald-900 px-2 py-1 text-[11px] font-semibold text-emerald-50"
+                  >
+                    <MapPinPlus size={12} /> 등록
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRegistrationPosition(null)}
+                    className="rounded-lg border border-stone-300 bg-white px-2 py-1 text-[11px] text-stone-700"
+                  >
+                    취소
+                  </button>
+                </>
+              ) : (
+                <span className="rounded-md border border-emerald-900/10 bg-emerald-50/70 px-2 py-1 text-[11px] text-emerald-900">
+                  지도를 클릭해 등록 위치를 선택하세요.
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={handleLocateCurrentPosition}
+                className="ml-auto inline-flex items-center gap-1 rounded-lg border border-emerald-900 bg-emerald-900 px-2 py-1 text-[11px] font-semibold text-emerald-50"
+              >
+                <LocateFixed size={11} /> {isLocating ? "확인 중" : "내 위치"}
+              </button>
+            </div>
+
+            {locationError ? (
+              <p className="mt-1 rounded-lg border border-rose-200 bg-rose-50 px-2 py-1 text-[11px] text-rose-700">
+                {locationError}
+              </p>
+            ) : null}
+          </div>
+
+          <div className="min-h-0 flex-1 px-0 pb-0 pt-14 md:px-3 md:pb-2 md:pt-0">
+            <div className="h-full overflow-hidden rounded-none border-0 bg-white md:rounded-2xl md:border md:border-emerald-900/12">
               <RecycleMapContainer
                 points={mapPoints}
                 selectedPosition={registrationPosition}
@@ -689,7 +716,7 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="border-t border-emerald-900/10 bg-white/90 px-2 py-2">
+          <div className="hidden border-t border-emerald-900/10 bg-white/90 px-2 py-2 md:block">
             <div className="mb-1 flex items-center justify-between px-2">
               <p className="text-xs font-semibold text-stone-700">내 주변 가까운 수거함</p>
               <p className="text-[11px] text-stone-500">최대 {MAX_NEARBY_CARDS}개</p>
