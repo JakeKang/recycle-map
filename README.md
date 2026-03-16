@@ -1,3 +1,6 @@
+> 현재 개발 진행중인 프로젝트입니다.
+> 지속적인 변경이 발생할 수 있습니다.
+
 # RecycleMap
 
 우리동네 자원순환 알리미.  
@@ -7,8 +10,6 @@
 
 ![RecycleMap Home (Desktop)](./readme-media/home-desktop.png)
 ![RecycleMap Point Detail (Desktop)](./readme-media/detail-desktop.png)
-![RecycleMap Home (Mobile)](./readme-media/home-mobile.png)
-![RecycleMap Perf Smoke (Local)](./readme-media/perf-smoke-local.png)
 
 ## Current MVP Status
 
