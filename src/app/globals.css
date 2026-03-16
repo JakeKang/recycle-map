@@ -1,0 +1,25 @@
+@import "tailwindcss";
+
+:root {
+  --background: #edf5ef;
+  --foreground: #1b1f24;
+  --brand-900: #1b5e20;
+  --brand-700: #2e7d32;
+  --brand-100: #e8f5e9;
+  --surface-soft: #f8faf9;
+  --border-soft: #e8eaed;
+  --font-sans: var(--font-noto-sans-kr);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-noto-sans-kr), sans-serif;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: #cfe9d1;
+  color: #0f3d15;
+}
