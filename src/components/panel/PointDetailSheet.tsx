@@ -275,6 +275,8 @@ export default function PointDetailSheet({
         onMobileSnapChange(SNAP_ORDER[currentIndex + 1]);
       } else if (dragOffset >= threshold && currentIndex > 0) {
         onMobileSnapChange(SNAP_ORDER[currentIndex - 1]);
+      } else if (dragOffset >= threshold && currentIndex === 0) {
+        onClose();
       }
 
       dragStartYRef.current = null;
@@ -297,7 +299,7 @@ export default function PointDetailSheet({
       window.removeEventListener("pointerup", onUp);
       window.removeEventListener("pointercancel", onCancel);
     };
-  }, [dragOffset, isDragging, isMobile, mobileSnap, onMobileSnapChange]);
+  }, [dragOffset, isDragging, isMobile, mobileSnap, onClose, onMobileSnapChange]);
 
   const mobileSnapClass =
     mobileSnap === "peek" ? "h-[44vh]" : mobileSnap === "mid" ? "h-[72vh]" : "h-[92vh]";

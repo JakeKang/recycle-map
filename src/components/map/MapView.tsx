@@ -9,7 +9,7 @@ import { getPointIcon } from "@/lib/map-marker-icon";
 import { CollectionPoint } from "@/types/point";
 import L from "leaflet";
 import { memo, useCallback, useEffect, useMemo, useRef } from "react";
-import { MapContainer, Marker, Popup, TileLayer, useMap, useMapEvents } from "react-leaflet";
+import { MapContainer, Marker, Popup, TileLayer, ZoomControl, useMap, useMapEvents } from "react-leaflet";
 import MarkerClusterGroup from "react-leaflet-markercluster";
 
 interface MapViewProps {
@@ -169,11 +169,13 @@ function MapView({
       zoom={MAP_DEFAULT_ZOOM}
       className="h-full w-full"
       scrollWheelZoom
+      zoomControl={false}
       zoomSnap={1}
       zoomAnimation
       fadeAnimation={false}
       markerZoomAnimation={false}
     >
+      <ZoomControl position="bottomright" />
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
         url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"

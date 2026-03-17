@@ -18,7 +18,6 @@ import { CATEGORIES, PointCategory, PointQuery } from "@/types/point";
 import {
   Menu,
   MapPinPlus,
-  LocateFixed,
   X,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -449,15 +448,6 @@ export default function Home() {
     requestCurrentLocation({ silent: false, recenter: true });
   }, [requestCurrentLocation]);
 
-  const handleOpenRegisterFromPanel = useCallback(() => {
-    if (registrationPosition) {
-      setIsRegisterDialogOpen(true);
-      setIsMobileMenuOpen(false);
-      return;
-    }
-    setLocationError("지도를 클릭해 위치를 선택한 뒤 등록해 주세요.");
-  }, [registrationPosition]);
-
   const handleBoundsChange = useCallback(
     (nextBounds: { swLat: number; swLng: number; neLat: number; neLng: number }) => {
       if (isSameBounds(boundsRef.current, nextBounds)) {
@@ -558,7 +548,6 @@ export default function Home() {
             onOpenMyReports={handleOpenMyReports}
             onLocate={handleLocateCurrentPosition}
             isLocating={isLocating}
-            onOpenRegister={handleOpenRegisterFromPanel}
             listPoints={panelListPoints}
             listTotalCount={mapPoints.length}
             selectedPointId={selectedPointId}
@@ -566,14 +555,16 @@ export default function Home() {
           />
         </aside>
 
-        <button
-          type="button"
-          onClick={() => setIsMobileMenuOpen(true)}
-          className="fixed left-4 top-4 z-[1250] inline-flex h-10 w-10 items-center justify-center rounded-xl border border-emerald-900/20 bg-white text-emerald-900 shadow-[0_8px_20px_rgba(15,23,42,0.2)] md:hidden"
-          aria-label="메뉴 열기"
-        >
-          <Menu size={18} />
-        </button>
+        {!isMobileMenuOpen ? (
+          <button
+            type="button"
+            onClick={() => setIsMobileMenuOpen(true)}
+            className="fixed left-3 top-3 z-[1250] inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-900 text-emerald-50 shadow-[0_4px_14px_rgba(15,23,42,0.3)] md:hidden"
+            aria-label="메뉴 열기"
+          >
+            <Menu size={19} />
+          </button>
+        ) : null}
 
         {isMobileMenuOpen ? (
           <button
@@ -586,18 +577,21 @@ export default function Home() {
 
         {isMobileMenuOpen ? (
           <aside
-            className="fixed inset-y-0 left-0 z-[1251] w-[88%] max-w-[380px] bg-white shadow-2xl md:hidden"
+            className="fixed inset-y-0 left-0 z-[1251] flex w-[88%] max-w-[360px] flex-col bg-white shadow-[4px_0_24px_rgba(15,23,42,0.18)] md:hidden"
             aria-label="모바일 메뉴"
           >
-            <div className="flex items-center justify-between border-b border-emerald-900/10 px-4 py-3">
-              <p className="text-sm font-semibold text-emerald-900">메뉴</p>
+            <div className="flex shrink-0 items-center justify-between bg-emerald-900 px-4 py-3">
+              <div className="flex items-center gap-2">
+                <span className="grid h-7 w-7 place-items-center rounded-lg bg-white/15 text-base text-emerald-50">♻</span>
+                <p className="text-sm font-bold tracking-tight text-emerald-50">우리동네 자원순환 알리미</p>
+              </div>
               <button
                 type="button"
                 onClick={() => setIsMobileMenuOpen(false)}
-                className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-emerald-900/15 bg-white text-emerald-900"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-white/15 text-emerald-50"
                 aria-label="메뉴 닫기"
               >
-                <X size={14} />
+                <X size={15} />
               </button>
             </div>
             <SidebarPanelContent
@@ -611,7 +605,6 @@ export default function Home() {
               onOpenMyReports={handleOpenMyReports}
               onLocate={handleLocateCurrentPosition}
               isLocating={isLocating}
-              onOpenRegister={handleOpenRegisterFromPanel}
               listPoints={panelListPoints}
               listTotalCount={mapPoints.length}
               selectedPointId={selectedPointId}
@@ -658,50 +651,7 @@ export default function Home() {
             ) : null}
           </div>
 
-          <div className="pointer-events-none absolute inset-x-3 top-16 z-[700] md:hidden">
-            <div className="pointer-events-auto flex flex-wrap items-center gap-1.5 rounded-xl border border-emerald-900/10 bg-white/90 px-2.5 py-2 text-[11px] text-stone-600 shadow-[0_6px_18px_rgba(15,23,42,0.14)]">
-              {registrationPosition ? (
-                <>
-                  <span className="rounded-md border border-emerald-900/15 bg-emerald-50 px-2 py-1 text-[11px] text-emerald-900">
-                    {registrationPosition.lat.toFixed(4)}, {registrationPosition.lng.toFixed(4)}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setIsRegisterDialogOpen(true)}
-                    className="inline-flex items-center gap-1 rounded-lg border border-emerald-900 bg-emerald-900 px-2 py-1 text-[11px] font-semibold text-emerald-50"
-                  >
-                    <MapPinPlus size={12} /> 등록
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setRegistrationPosition(null)}
-                    className="rounded-lg border border-stone-300 bg-white px-2 py-1 text-[11px] text-stone-700"
-                  >
-                    취소
-                  </button>
-                </>
-              ) : (
-                <span className="rounded-md border border-emerald-900/10 bg-emerald-50/70 px-2 py-1 text-[11px] text-emerald-900">
-                  지도를 클릭해 등록 위치를 선택하세요.
-                </span>
-              )}
-              <button
-                type="button"
-                onClick={handleLocateCurrentPosition}
-                className="ml-auto inline-flex items-center gap-1 rounded-lg border border-emerald-900 bg-emerald-900 px-2 py-1 text-[11px] font-semibold text-emerald-50"
-              >
-                <LocateFixed size={11} /> {isLocating ? "확인 중" : "내 위치"}
-              </button>
-            </div>
-
-            {locationError ? (
-              <p className="mt-1 rounded-lg border border-rose-200 bg-rose-50 px-2 py-1 text-[11px] text-rose-700">
-                {locationError}
-              </p>
-            ) : null}
-          </div>
-
-          <div className="min-h-0 flex-1 px-0 pb-0 pt-14 md:px-3 md:pb-2 md:pt-0">
+          <div className="relative min-h-0 flex-1 md:px-3 md:pb-2">
             <div className="h-full overflow-hidden rounded-none border-0 bg-white md:rounded-2xl md:border md:border-emerald-900/12">
               <RecycleMapContainer
                 points={mapPoints}
@@ -714,6 +664,37 @@ export default function Home() {
                 onBoundsChange={handleBoundsChange}
               />
             </div>
+
+            {(registrationPosition || locationError) ? (
+              <div className="pointer-events-none absolute inset-x-0 bottom-3 z-[700] px-3 md:hidden">
+                <div className="pointer-events-auto flex flex-wrap items-center gap-1.5 rounded-2xl border border-emerald-900/10 bg-white/95 px-3 py-2.5 shadow-[0_6px_18px_rgba(15,23,42,0.18)]">
+                  {registrationPosition ? (
+                    <>
+                      <span className="text-[11px] font-medium text-emerald-900">
+                        {registrationPosition.lat.toFixed(4)}, {registrationPosition.lng.toFixed(4)}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setIsRegisterDialogOpen(true)}
+                        className="inline-flex items-center gap-1 rounded-lg border border-emerald-900 bg-emerald-900 px-2.5 py-1.5 text-[11px] font-semibold text-emerald-50"
+                      >
+                        <MapPinPlus size={12} /> 이 위치 등록
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setRegistrationPosition(null)}
+                        className="rounded-lg border border-stone-300 bg-white px-2 py-1.5 text-[11px] text-stone-700"
+                      >
+                        취소
+                      </button>
+                    </>
+                  ) : null}
+                  {locationError ? (
+                    <p className="w-full text-[11px] text-rose-700">{locationError}</p>
+                  ) : null}
+                </div>
+              </div>
+            ) : null}
           </div>
 
           <div className="hidden border-t border-emerald-900/10 bg-white/90 px-2 py-2 md:block">

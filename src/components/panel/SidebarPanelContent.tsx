@@ -7,7 +7,7 @@ import {
   getCategoryVisual,
 } from "@/lib/point-visuals";
 import { CollectionPoint, CATEGORIES, PointCategory } from "@/types/point";
-import { ListFilter, LocateFixed, MapPinPlus, Search } from "lucide-react";
+import { ListFilter, LocateFixed, Search } from "lucide-react";
 
 const CATEGORY_ENTRIES = Object.entries(CATEGORIES) as Array<
   [PointCategory, (typeof CATEGORIES)[PointCategory]]
@@ -24,7 +24,6 @@ interface SidebarPanelContentProps {
   onOpenMyReports: () => void;
   onLocate: () => void;
   isLocating: boolean;
-  onOpenRegister: () => void;
   listPoints: CollectionPoint[];
   listTotalCount: number;
   selectedPointId: string | null;
@@ -42,7 +41,6 @@ export default function SidebarPanelContent({
   onOpenMyReports,
   onLocate,
   isLocating,
-  onOpenRegister,
   listPoints,
   listTotalCount,
   selectedPointId,
@@ -127,17 +125,10 @@ export default function SidebarPanelContent({
         </div>
       </div>
 
-      <div className="flex items-center justify-between px-4 py-3">
+      <div className="flex items-center px-4 py-3">
         <span className="inline-flex items-center gap-1 text-xs font-semibold text-stone-700">
           <ListFilter size={13} /> 수거함 목록
         </span>
-        <button
-          type="button"
-          onClick={onOpenRegister}
-          className="inline-flex items-center gap-1 rounded-lg border border-emerald-900 bg-emerald-900 px-2.5 py-1.5 text-xs font-semibold text-emerald-50"
-        >
-          <MapPinPlus size={12} /> 등록하기
-        </button>
       </div>
 
       {listTotalCount > listPoints.length ? (
