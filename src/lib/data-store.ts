@@ -1,3 +1,4 @@
+import { haversineMeters } from "@/lib/distance";
 import { CollectionPoint, PointQuery } from "@/types/point";
 import { Report } from "@/types/report";
 import { Review } from "@/types/review";
@@ -178,23 +179,6 @@ function inBounds(point: CollectionPoint, query: PointQuery) {
     point.lng >= query.swLng &&
     point.lng <= query.neLng
   );
-}
-
-function haversineMeters(
-  lat1: number,
-  lon1: number,
-  lat2: number,
-  lon2: number,
-) {
-  const toRad = (v: number) => (v * Math.PI) / 180;
-  const earthRadius = 6371e3;
-  const dLat = toRad(lat2 - lat1);
-  const dLon = toRad(lon2 - lon1);
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return earthRadius * c;
 }
 
 function recalcRating(pointId: string) {

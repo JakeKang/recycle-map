@@ -1,3 +1,7 @@
+/**
+ * 인메모리 슬라이딩-윈도우 레이트 리미터.
+ * 단일 인스턴스 환경 전용 — 다중 인스턴스 배포 시 Redis 등 공유 스토어로 교체 필요.
+ */
 interface RateLimitRule {
   key: string;
   windowMs: number;

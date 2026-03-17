@@ -12,6 +12,7 @@ const { resolveRequestUserIdMock } = vi.hoisted(() => ({
 
 vi.mock("@/lib/request-user", () => ({
   resolveRequestUserId: resolveRequestUserIdMock,
+  isAdminUserId: () => false,
 }));
 
 describe("point confirm route", () => {
@@ -29,7 +30,7 @@ describe("point confirm route", () => {
     );
     expect(unauth.status).toBe(401);
 
-    resolveRequestUserIdMock.mockResolvedValueOnce("reviewer-user");
+    resolveRequestUserIdMock.mockResolvedValueOnce("owner-user");
     const success = await postConfirm(
       jsonRequest(`http://localhost/api/points/${point.id}/confirm`, "POST", {}),
       { params: Promise.resolve({ id: point.id }) },

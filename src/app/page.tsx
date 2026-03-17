@@ -7,6 +7,8 @@ import SidebarPanelContent from "@/components/panel/SidebarPanelContent";
 import type { MobileSnap } from "@/components/panel/PointDetailSheet";
 import RegisterPointDialog from "@/components/point/RegisterPointDialog";
 import { usePoints } from "@/hooks/usePoints";
+import { formatDistanceLabel, haversineMeters } from "@/lib/distance";
+import { useGeolocation } from "@/hooks/useGeolocation";
 import {
   categoryLabel,
   getCategoryVisual,
@@ -51,26 +53,6 @@ function isCategoryOrAll(value: string | null): value is PointCategory | "all" {
 
 function isMobileSnap(value: string | null): value is MobileSnap {
   return value === "peek" || value === "mid" || value === "full";
-}
-
-function haversineMeters(aLat: number, aLng: number, bLat: number, bLng: number) {
-  const toRad = (value: number) => (value * Math.PI) / 180;
-  const earthRadius = 6371e3;
-  const dLat = toRad(bLat - aLat);
-  const dLng = toRad(bLng - aLng);
-  const aa =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(aLat)) * Math.cos(toRad(bLat)) * Math.sin(dLng / 2) ** 2;
-  const c = 2 * Math.atan2(Math.sqrt(aa), Math.sqrt(1 - aa));
-  return earthRadius * c;
-}
-
-function formatDistanceLabel(distanceMeters: number) {
-  if (distanceMeters < 1000) {
-    return `내 위치 ${Math.round(distanceMeters)}m`;
-  }
-
-  return `내 위치 ${(distanceMeters / 1000).toFixed(1)}km`;
 }
 
 function isSameBounds(
@@ -118,14 +100,17 @@ export default function Home() {
     lng: number;
     zoom?: number;
   } | null>(null);
-  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
-  const [isLocating, setIsLocating] = useState(false);
-  const [locationError, setLocationError] = useState<string | null>(null);
+  const {
+    location: userLocation,
+    isLocating,
+    error: locationError,
+    requestLocation,
+    onLocated,
+  } = useGeolocation(true);
   const [isMyReportsOpen, setIsMyReportsOpen] = useState(false);
   const [isRegisterDialogOpen, setIsRegisterDialogOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [debouncedQuery, setDebouncedQuery] = useState(query);
-  const didAutoLocateRef = useRef(false);
   const boundsRef = useRef(bounds);
 
   useEffect(() => {
@@ -387,66 +372,16 @@ export default function Home() {
     return { id: target.id, lat: target.lat, lng: target.lng, zoom: 16 };
   }, [manualFocusTarget, mapPoints, selectedPointId]);
 
-  const requestCurrentLocation = useCallback(
-    (options?: { silent?: boolean; recenter?: boolean }) => {
-      const silent = options?.silent ?? false;
-      const recenter = options?.recenter ?? true;
-
-      if (!navigator.geolocation) {
-        if (!silent) {
-          setLocationError("이 브라우저에서는 위치 기능을 지원하지 않습니다.");
-        }
-        return;
-      }
-
-      setIsLocating(true);
-      if (!silent) {
-        setLocationError(null);
-      }
-
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const lat = Number(position.coords.latitude.toFixed(6));
-          const lng = Number(position.coords.longitude.toFixed(6));
-          setUserLocation({ lat, lng });
-          if (recenter) {
-            setManualFocusTarget({ id: `me-${Date.now()}`, lat, lng, zoom: 15 });
-          }
-          setIsLocating(false);
-          setLocationError(null);
-        },
-        () => {
-          setIsLocating(false);
-          if (!silent) {
-            setLocationError("현재 위치를 가져오지 못했습니다. 위치 권한을 확인해 주세요.");
-          }
-        },
-        {
-          enableHighAccuracy: true,
-          timeout: 8000,
-          maximumAge: 30_000,
-        },
-      );
-    },
-    [],
-  );
-
-  useEffect(() => {
-    if (didAutoLocateRef.current) {
-      return;
-    }
-    didAutoLocateRef.current = true;
-
-    const timer = window.setTimeout(() => {
-      requestCurrentLocation({ silent: true, recenter: true });
-    }, 0);
-
-    return () => window.clearTimeout(timer);
-  }, [requestCurrentLocation]);
+  onLocated(useCallback(({ lat, lng }: { lat: number; lng: number }) => {
+    setManualFocusTarget((prev) => {
+      const id = `me-${prev?.id?.split("-")[1] ?? "0"}`;
+      return { id, lat, lng, zoom: 15 };
+    });
+  }, []));
 
   const handleLocateCurrentPosition = useCallback(() => {
-    requestCurrentLocation({ silent: false, recenter: true });
-  }, [requestCurrentLocation]);
+    requestLocation({ silent: false });
+  }, [requestLocation]);
 
   const handleBoundsChange = useCallback(
     (nextBounds: { swLat: number; swLng: number; neLat: number; neLng: number }) => {

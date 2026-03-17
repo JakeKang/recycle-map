@@ -56,6 +56,7 @@ function getMetaDir() {
   return path.join(getStorageRootDir(), "upload-meta");
 }
 
+/** 경로 순회(path traversal) 공격 방지 — 파일 접근이 반드시 base 디렉터리 내부로 제한되어야 함 */
 function ensureInsideBase(base: string, target: string) {
   const resolvedBase = path.resolve(base);
   const resolvedTarget = path.resolve(target);
@@ -106,6 +107,7 @@ function getFilePath(storedName: string) {
   return filePath;
 }
 
+/** 파일 매직 바이트로 실제 이미지 형식 검증 — Content-Type 헤더 위변조 방지 */
 function detectImageMimeType(
   fileBuffer: Buffer,
 ): (typeof ALLOWED_IMAGE_MIME_TYPES)[number] | null {

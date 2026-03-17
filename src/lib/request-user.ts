@@ -31,6 +31,11 @@ function isDevHeaderEnabled() {
   );
 }
 
+/**
+ * 요청에서 사용자 ID를 확인하는 진입점.
+ * 프로덕션: NextAuth 세션만 허용.
+ * 개발/테스트: ALLOW_DEV_USER_HEADER=true 이고 NODE_ENV≠production일 때만 x-dev-user-id 헤더 허용.
+ */
 export async function resolveRequestUserId(request: NextRequest) {
   const sessionUserId = await getCurrentUserId();
   if (sessionUserId) {

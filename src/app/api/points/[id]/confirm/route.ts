@@ -1,7 +1,7 @@
 import { consumeRateLimit } from "@/lib/rate-limit";
 import { resolveClientAddress, isSameOriginRequest } from "@/lib/request-security";
 import { repository } from "@/lib/data-repository";
-import { resolveRequestUserId } from "@/lib/request-user";
+import { isAdminUserId, resolveRequestUserId } from "@/lib/request-user";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(
@@ -24,6 +24,10 @@ export async function POST(
   const point = await repository.getPoint(id);
   if (!point) {
     return NextResponse.json({ message: "포인트를 찾을 수 없습니다." }, { status: 404 });
+  }
+
+  if (point.userId !== userId && !isAdminUserId(userId)) {
+    return NextResponse.json({ message: "본인이 등록한 수거함만 확인 처리할 수 있습니다." }, { status: 403 });
   }
 
   const clientAddress = resolveClientAddress(request);
