@@ -5,6 +5,7 @@ import { resolveClientAddress, isSameOriginRequest } from "@/lib/request-securit
 import { repository } from "@/lib/data-repository";
 import { resolveRequestUserId } from "@/lib/request-user";
 import { suggestionSchema } from "@/lib/validators";
+import { PointSuggestion } from "@/types/suggestion";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(
@@ -18,7 +19,8 @@ export async function GET(
   }
 
   const suggestions = await repository.listSuggestions(id);
-  return NextResponse.json(suggestions);
+  const publicSuggestions = suggestions.map(({ userId: _userId, ...rest }: PointSuggestion) => rest);
+  return NextResponse.json(publicSuggestions);
 }
 
 export async function POST(

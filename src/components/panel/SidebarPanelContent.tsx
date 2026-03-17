@@ -6,7 +6,8 @@ import {
   getCategoryChipStyle,
   getCategoryVisual,
 } from "@/lib/point-visuals";
-import { CollectionPoint, CATEGORIES, PointCategory } from "@/types/point";
+import { PublicPoint as CollectionPoint } from "@/lib/public-mappers";
+import { CATEGORIES, PointCategory } from "@/types/point";
 import { ListFilter, LocateFixed, Search } from "lucide-react";
 
 const CATEGORY_ENTRIES = Object.entries(CATEGORIES) as Array<

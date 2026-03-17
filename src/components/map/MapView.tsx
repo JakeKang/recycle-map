@@ -6,7 +6,7 @@ import "react-leaflet-markercluster/styles";
 import PointPopupContent from "@/components/map/PointPopupContent";
 import { MAP_DEFAULT_CENTER, MAP_DEFAULT_ZOOM } from "@/constants/map";
 import { getPointIcon } from "@/lib/map-marker-icon";
-import { CollectionPoint } from "@/types/point";
+import { PublicPoint as CollectionPoint } from "@/lib/public-mappers";
 import L from "leaflet";
 import { memo, useCallback, useEffect, useMemo, useRef } from "react";
 import { MapContainer, Marker, Popup, TileLayer, ZoomControl, useMap, useMapEvents } from "react-leaflet";

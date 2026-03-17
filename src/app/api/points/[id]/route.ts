@@ -1,6 +1,7 @@
 import { formatValidationIssues } from "@/lib/api-error";
 import { readJsonBody } from "@/lib/http-body";
 import { consumeRateLimit } from "@/lib/rate-limit";
+import { toPublicPoint, toPublicReviews } from "@/lib/public-mappers";
 import { resolveClientAddress, isSameOriginRequest } from "@/lib/request-security";
 import { repository } from "@/lib/data-repository";
 import { resolveRequestUserId } from "@/lib/request-user";
@@ -18,7 +19,7 @@ export async function GET(
   }
 
   const reviews = await repository.listReviews(id);
-  return NextResponse.json({ ...point, reviews });
+  return NextResponse.json({ ...toPublicPoint(point), reviews: toPublicReviews(reviews) });
 }
 
 export async function PATCH(

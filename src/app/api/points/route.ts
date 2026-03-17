@@ -1,6 +1,7 @@
 import { formatValidationIssues } from "@/lib/api-error";
 import { readJsonBody } from "@/lib/http-body";
 import { repository } from "@/lib/data-repository";
+import { toPublicPoints } from "@/lib/public-mappers";
 import { consumeRateLimit } from "@/lib/rate-limit";
 import { resolveClientAddress, isSameOriginRequest } from "@/lib/request-security";
 import { resolveRequestUserId } from "@/lib/request-user";
@@ -16,6 +17,9 @@ export function resetPointsRouteStateForTests() {
   registrationCounter.clear();
 }
 
+const KOREA_LAT = { min: 33, max: 43 } as const;
+const KOREA_LNG = { min: 124, max: 132 } as const;
+
 function parseNumber(value: string | null) {
   if (!value) {
     return undefined;
@@ -23,6 +27,18 @@ function parseNumber(value: string | null) {
 
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function parseLatBound(value: string | null): number | undefined {
+  const n = parseNumber(value);
+  if (n === undefined) return undefined;
+  return n >= KOREA_LAT.min && n <= KOREA_LAT.max ? n : undefined;
+}
+
+function parseLngBound(value: string | null): number | undefined {
+  const n = parseNumber(value);
+  if (n === undefined) return undefined;
+  return n >= KOREA_LNG.min && n <= KOREA_LNG.max ? n : undefined;
 }
 
 function buildQuery(searchParams: URLSearchParams): PointQuery {
@@ -33,10 +49,10 @@ function buildQuery(searchParams: URLSearchParams): PointQuery {
     q: searchParams.get("q") ?? undefined,
     category: category as PointCategory | undefined,
     status: status as PointQuery["status"],
-    swLat: parseNumber(searchParams.get("sw_lat")),
-    swLng: parseNumber(searchParams.get("sw_lng")),
-    neLat: parseNumber(searchParams.get("ne_lat")),
-    neLng: parseNumber(searchParams.get("ne_lng")),
+    swLat: parseLatBound(searchParams.get("sw_lat")),
+    swLng: parseLngBound(searchParams.get("sw_lng")),
+    neLat: parseLatBound(searchParams.get("ne_lat")),
+    neLng: parseLngBound(searchParams.get("ne_lng")),
   };
 }
 
@@ -45,7 +61,7 @@ function buildPointsResponse(
   startedAt: number,
 ) {
   const elapsedMs = Date.now() - startedAt;
-  const response = NextResponse.json(data);
+  const response = NextResponse.json(toPublicPoints(data));
   response.headers.set("x-points-query-ms", String(elapsedMs));
   response.headers.set("x-points-count", String(data.length));
   return { response, elapsedMs };

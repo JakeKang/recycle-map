@@ -1,3 +1,4 @@
+import type { PublicReview } from "@/lib/public-mappers";
 import { Review } from "@/types/review";
 
 export const CATEGORIES = {
@@ -51,6 +52,10 @@ export interface PointQuery {
   neLat?: number;
   neLng?: number;
 }
+
+export type PublicPointDetail = Omit<CollectionPoint, "userId"> & {
+  reviews: PublicReview[];
+};
 
 export interface PointDetail extends CollectionPoint {
   reviews: Review[];

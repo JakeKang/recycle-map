@@ -1,6 +1,7 @@
 import { formatValidationIssues } from "@/lib/api-error";
 import { readJsonBody } from "@/lib/http-body";
 import { consumeRateLimit } from "@/lib/rate-limit";
+import { toPublicReviews } from "@/lib/public-mappers";
 import { resolveClientAddress, isSameOriginRequest } from "@/lib/request-security";
 import { repository } from "@/lib/data-repository";
 import { resolveRequestUserId } from "@/lib/request-user";
@@ -21,7 +22,7 @@ export async function GET(
   const start = (page - 1) * limit;
   const data = all.slice(start, start + limit);
 
-  return NextResponse.json({ data, total: all.length });
+  return NextResponse.json({ data: toPublicReviews(data), total: all.length });
 }
 
 export async function POST(

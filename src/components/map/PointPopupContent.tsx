@@ -1,4 +1,4 @@
-import { CollectionPoint } from "@/types/point";
+import { PublicPoint as CollectionPoint } from "@/lib/public-mappers";
 
 interface PointPopupContentProps {
   point: CollectionPoint;

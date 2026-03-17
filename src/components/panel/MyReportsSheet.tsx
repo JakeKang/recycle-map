@@ -1,7 +1,8 @@
 "use client";
 
 import { useMyPoints, useUpdatePoint } from "@/hooks/usePoints";
-import { CATEGORIES, CollectionPoint, PointCategory } from "@/types/point";
+import { PublicPoint as CollectionPoint } from "@/lib/public-mappers";
+import { CATEGORIES, PointCategory } from "@/types/point";
 import { Edit3 } from "lucide-react";
 import { useMemo, useState } from "react";
 

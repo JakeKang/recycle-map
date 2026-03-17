@@ -2,7 +2,8 @@
 
 import { extractErrorMessage } from "@/lib/api-error";
 import { buildClientHeaders, buildClientJsonHeaders } from "@/lib/client-dev-user";
-import { CollectionPoint, PointFormData, PointQuery } from "@/types/point";
+import { PublicPoint } from "@/lib/public-mappers";
+import { PointFormData, PointQuery } from "@/types/point";
 import { PointSuggestion } from "@/types/suggestion";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -28,7 +29,7 @@ function toSearchParams(query?: PointQuery) {
 }
 
 export function usePoints(query?: PointQuery, options?: UsePointsOptions) {
-  return useQuery<CollectionPoint[]>({
+  return useQuery<PublicPoint[]>({
     queryKey: ["points", query],
     enabled: options?.enabled ?? true,
     staleTime: 15_000,
@@ -47,7 +48,7 @@ export function usePoints(query?: PointQuery, options?: UsePointsOptions) {
         throw new Error(extractErrorMessage(payload, "포인트 목록 조회에 실패했습니다."));
       }
 
-      const data = (await response.json()) as CollectionPoint[];
+      const data = (await response.json()) as PublicPoint[];
 
       if (process.env.NODE_ENV !== "production") {
         const serverMsRaw = response.headers.get("x-points-query-ms");
@@ -120,7 +121,7 @@ export function useSuggestions(pointId: string | null) {
 }
 
 export function useMyPoints(enabled = true) {
-  return useQuery<CollectionPoint[]>({
+  return useQuery<PublicPoint[]>({
     queryKey: ["points", "mine"],
     enabled,
     queryFn: async () => {

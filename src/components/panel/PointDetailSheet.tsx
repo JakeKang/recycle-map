@@ -7,7 +7,7 @@ import { useSuggestions } from "@/hooks/usePoints";
 import { extractErrorMessage } from "@/lib/api-error";
 import { buildClientJsonHeaders } from "@/lib/client-dev-user";
 import { categoryLabel, getCategoryVisual } from "@/lib/point-visuals";
-import { PointCategory, PointDetail } from "@/types/point";
+import { PointCategory, PublicPointDetail } from "@/types/point";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, Flag, MessageCircle, PenSquare } from "lucide-react";
 import Link from "next/link";
@@ -53,7 +53,7 @@ export default function PointDetailSheet({
     error: suggestionsError,
   } = useSuggestions(pointId);
 
-  const { data, isLoading, error } = useQuery<PointDetail>({
+  const { data, isLoading, error } = useQuery<PublicPointDetail>({
     queryKey: ["point", pointId],
     enabled: Boolean(pointId),
     queryFn: async () => {
@@ -376,7 +376,7 @@ export default function PointDetailSheet({
 
               {data.photoIds && data.photoIds.length > 0 ? (
                 <div className="mt-3 grid grid-cols-3 gap-2">
-                  {data.photoIds.map((photoId) => (
+                  {data.photoIds.map((photoId: string) => (
                     <a
                       key={photoId}
                       href={`/api/upload/${photoId}/download`}

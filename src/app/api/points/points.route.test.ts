@@ -46,7 +46,7 @@ describe("points route", () => {
 
     const data = (await mineResponse.json()) as PointResponse[];
     expect(data.length).toBeGreaterThanOrEqual(1);
-    expect(data.every((item) => item.userId === "mine-user")).toBe(true);
+    expect(data.every((item) => !("userId" in item))).toBe(true);
     expect(data.some((item) => item.id === mine.id)).toBe(true);
   });
 

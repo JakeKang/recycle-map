@@ -3,7 +3,7 @@
 import NavigationLinks from "@/components/point/NavigationLinks";
 import { extractErrorMessage } from "@/lib/api-error";
 import { buildClientJsonHeaders } from "@/lib/client-dev-user";
-import { PointDetail } from "@/types/point";
+import { PublicPointDetail } from "@/types/point";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -16,7 +16,7 @@ export default function PointDetailPage() {
   const [comment, setComment] = useState("");
   const [reportReason, setReportReason] = useState("");
 
-  const { data, isLoading, error } = useQuery<PointDetail>({
+  const { data, isLoading, error } = useQuery<PublicPointDetail>({
     queryKey: ["point", params.id],
     queryFn: async () => {
       const response = await fetch(`/api/points/${params.id}`);
@@ -119,7 +119,7 @@ export default function PointDetailPage() {
         </p>
         {data.photoIds && data.photoIds.length > 0 ? (
           <div className="mt-3 grid grid-cols-2 gap-2 md:grid-cols-3">
-            {data.photoIds.map((photoId) => (
+            {data.photoIds.map((photoId: string) => (
               <a
                 key={photoId}
                 href={`/api/upload/${photoId}/download`}
@@ -182,7 +182,7 @@ export default function PointDetailPage() {
         </form>
 
         <div className="mt-4 space-y-2">
-          {data.reviews.map((review) => (
+          {data.reviews.map((review: { id: string; rating: number; comment: string | null }) => (
             <div key={review.id} className="rounded-xl border border-emerald-900/10 bg-white p-3">
               <p className="text-sm font-semibold">{review.rating}점</p>
               <p className="text-sm text-stone-700">{review.comment ?? "코멘트 없음"}</p>

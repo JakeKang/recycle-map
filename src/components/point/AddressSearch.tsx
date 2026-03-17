@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useIsMobile } from "@/hooks/useIsMobile";
+import { useCallback, useRef, useState } from "react";
 
 interface AddressSearchProps {
   onSelect: (address: string) => void;
@@ -52,19 +53,10 @@ function ensureDaumPostcodeScript() {
 
 export default function AddressSearch({ onSelect }: AddressSearchProps) {
   const [error, setError] = useState<string | null>(null);
-  const [isMobile, setIsMobile] = useState(false);
+  const isMobile = useIsMobile(768);
   const [isEmbedOpen, setIsEmbedOpen] = useState(false);
   const triggerButtonRef = useRef<HTMLButtonElement | null>(null);
   const embedContainerRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    const media = window.matchMedia("(max-width: 768px)");
-    const update = () => setIsMobile(media.matches);
-    update();
-
-    media.addEventListener("change", update);
-    return () => media.removeEventListener("change", update);
-  }, []);
 
   const focusNextField = useCallback(() => {
     const form = triggerButtonRef.current?.closest("form");

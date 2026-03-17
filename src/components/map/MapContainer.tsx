@@ -1,6 +1,6 @@
 "use client";
 
-import { CollectionPoint } from "@/types/point";
+import { PublicPoint as CollectionPoint } from "@/lib/public-mappers";
 import dynamic from "next/dynamic";
 import { memo } from "react";
 

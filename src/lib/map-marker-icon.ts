@@ -1,5 +1,5 @@
 import { createPointMarkerHtml } from "@/lib/point-visuals";
-import { CollectionPoint } from "@/types/point";
+import { PublicPoint as CollectionPoint } from "@/lib/public-mappers";
 import L from "leaflet";
 
 const POINT_ICON_CACHE = new Map<string, L.DivIcon>();
