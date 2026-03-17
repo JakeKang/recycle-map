@@ -22,6 +22,7 @@ import {
   MapPinPlus,
   X,
 } from "lucide-react";
+import { useSession } from "next-auth/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 const SHEET_SNAP_ORDER: MobileSnap[] = ["peek", "mid", "full"];
@@ -107,6 +108,8 @@ export default function Home() {
     requestLocation,
     onLocated,
   } = useGeolocation(true);
+  const { data: session } = useSession();
+  const isLoggedIn = Boolean(session?.user);
   const [isMyReportsOpen, setIsMyReportsOpen] = useState(false);
   const [isRegisterDialogOpen, setIsRegisterDialogOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -557,13 +560,23 @@ export default function Home() {
                   <span className="rounded-md border border-emerald-900/15 bg-emerald-50 px-2 py-1 text-[11px] text-emerald-900">
                     선택 위치 {registrationPosition.lat.toFixed(4)}, {registrationPosition.lng.toFixed(4)}
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => setIsRegisterDialogOpen(true)}
-                    className="inline-flex items-center gap-1 rounded-lg border border-emerald-900 bg-emerald-900 px-2.5 py-1.5 text-xs font-semibold text-emerald-50"
-                  >
-                    <MapPinPlus size={13} /> 이 위치 등록
-                  </button>
+                  {isLoggedIn ? (
+                    <button
+                      type="button"
+                      onClick={() => setIsRegisterDialogOpen(true)}
+                      className="inline-flex items-center gap-1 rounded-lg border border-emerald-900 bg-emerald-900 px-2.5 py-1.5 text-xs font-semibold text-emerald-50"
+                    >
+                      <MapPinPlus size={13} /> 이 위치 등록
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setIsRegisterDialogOpen(true)}
+                      className="inline-flex items-center gap-1 rounded-lg border border-amber-400 bg-amber-50 px-2.5 py-1.5 text-xs font-semibold text-amber-800"
+                    >
+                      <MapPinPlus size={13} /> 로그인 후 등록
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => setRegistrationPosition(null)}
@@ -600,34 +613,29 @@ export default function Home() {
               />
             </div>
 
-            {(registrationPosition || locationError) ? (
-              <div className="pointer-events-none absolute inset-x-0 bottom-3 z-[700] px-3 md:hidden">
-                <div className="pointer-events-auto flex flex-wrap items-center gap-1.5 rounded-2xl border border-emerald-900/10 bg-white/95 px-3 py-2.5 shadow-[0_6px_18px_rgba(15,23,42,0.18)]">
-                  {registrationPosition ? (
-                    <>
-                      <span className="text-[11px] font-medium text-emerald-900">
-                        {registrationPosition.lat.toFixed(4)}, {registrationPosition.lng.toFixed(4)}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setIsRegisterDialogOpen(true)}
-                        className="inline-flex items-center gap-1 rounded-lg border border-emerald-900 bg-emerald-900 px-2.5 py-1.5 text-[11px] font-semibold text-emerald-50"
-                      >
-                        <MapPinPlus size={12} /> 이 위치 등록
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setRegistrationPosition(null)}
-                        className="rounded-lg border border-stone-300 bg-white px-2 py-1.5 text-[11px] text-stone-700"
-                      >
-                        취소
-                      </button>
-                    </>
-                  ) : null}
-                  {locationError ? (
-                    <p className="w-full text-[11px] text-rose-700">{locationError}</p>
-                  ) : null}
-                </div>
+            {registrationPosition && !isMobileMenuOpen ? (
+              <div className="fixed right-3 top-3 z-[1252] flex items-center gap-1 rounded-2xl border border-emerald-900/15 bg-white/98 pl-2.5 pr-1.5 py-1.5 shadow-[0_6px_18px_rgba(15,23,42,0.22)] md:hidden">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!isLoggedIn) {
+                      setIsMobileMenuOpen(true);
+                      return;
+                    }
+                    setIsRegisterDialogOpen(true);
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-900 bg-emerald-900 px-2.5 py-1.5 text-[11px] font-semibold text-emerald-50"
+                >
+                  <MapPinPlus size={12} /> 위치 등록
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRegistrationPosition(null)}
+                  aria-label="위치 선택 취소"
+                  className="grid h-7 w-7 place-items-center rounded-xl text-stone-500 hover:bg-stone-100"
+                >
+                  <X size={14} />
+                </button>
               </div>
             ) : null}
           </div>
