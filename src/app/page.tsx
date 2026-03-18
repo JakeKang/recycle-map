@@ -1,6 +1,7 @@
 "use client";
 
 import RecycleMapContainer from "@/components/map/MapContainer";
+import MobileBottomTabs from "@/components/navigation/MobileBottomTabs";
 import MyReportsSheet from "@/components/panel/MyReportsSheet";
 import PointDetailSheet from "@/components/panel/PointDetailSheet";
 import SidebarPanelContent from "@/components/panel/SidebarPanelContent";
@@ -15,6 +16,7 @@ import {
 } from "@/lib/point-visuals";
 import {
   useMapStore,
+  WorkspacePreset,
 } from "@/stores/mapStore";
 import { CATEGORIES, PointCategory, PointQuery } from "@/types/point";
 import {
@@ -27,7 +29,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 const SHEET_SNAP_ORDER: MobileSnap[] = ["peek", "mid", "full"];
 
-const MANAGED_QUERY_KEYS = ["q", "category", "sort", "point", "sheet", "reports"];
+const MANAGED_QUERY_KEYS = ["q", "category", "sort", "preset", "point", "sheet", "reports"];
+
+function isWorkspacePreset(value: string | null): value is WorkspacePreset {
+  return (
+    value === "field-map" || value === "collection-inbox" || value === "trust-reports"
+  );
+}
 const NEARBY_RADIUS_METERS = 3500;
 const MAX_NEARBY_CARDS = 12;
 const MAX_PANEL_LIST_ITEMS = 180;
@@ -77,6 +85,7 @@ export default function Home() {
   const previousUrlStateRef = useRef<{
     query: string;
     selectedCategory: PointCategory | "all";
+    workspacePreset: WorkspacePreset;
     selectedPointId: string | null;
     sheetSnap: MobileSnap;
     isMyReportsOpen: boolean;
@@ -87,10 +96,12 @@ export default function Home() {
     query,
     bounds,
     registrationPosition,
+    workspacePreset,
     setBounds,
     setSelectedCategory,
     setQuery,
     setRegistrationPosition,
+    setWorkspacePreset,
   } = useMapStore();
 
   const [selectedPointId, setSelectedPointId] = useState<string | null>(null);
@@ -110,6 +121,7 @@ export default function Home() {
   } = useGeolocation(true);
   const { data: session } = useSession();
   const isLoggedIn = Boolean(session?.user);
+  const isAdmin = session?.user?.isAdmin ?? false;
   const [isMyReportsOpen, setIsMyReportsOpen] = useState(false);
   const [isRegisterDialogOpen, setIsRegisterDialogOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -133,6 +145,17 @@ export default function Home() {
       let hasIncomingState = false;
 
       const shouldOpenReports = params.get("reports") === "1";
+
+      const nextPreset = params.get("preset");
+      if (isWorkspacePreset(nextPreset)) {
+        if (nextPreset !== workspacePreset) {
+          setWorkspacePreset(nextPreset);
+          hasIncomingState = true;
+        }
+      } else if (resetMissingToDefault && workspacePreset !== "field-map") {
+        setWorkspacePreset("field-map");
+        hasIncomingState = true;
+      }
 
       const nextCategory = params.get("category");
       if (isCategoryOrAll(nextCategory)) {
@@ -203,11 +226,13 @@ export default function Home() {
     [
       query,
       selectedCategory,
+      workspacePreset,
       selectedPointId,
       sheetSnap,
       isMyReportsOpen,
       setQuery,
       setSelectedCategory,
+      setWorkspacePreset,
     ],
   );
 
@@ -254,6 +279,9 @@ export default function Home() {
       params.delete(key);
     }
 
+    if (workspacePreset !== "field-map") {
+      params.set("preset", workspacePreset);
+    }
     if (query.trim()) {
       params.set("q", query.trim());
     }
@@ -281,6 +309,7 @@ export default function Home() {
     const nextState = {
       query,
       selectedCategory,
+      workspacePreset,
       selectedPointId,
       sheetSnap,
       isMyReportsOpen,
@@ -300,7 +329,7 @@ export default function Home() {
     }
 
     previousUrlStateRef.current = nextState;
-  }, [query, selectedCategory, selectedPointId, sheetSnap, isMyReportsOpen]);
+  }, [query, selectedCategory, workspacePreset, selectedPointId, sheetSnap, isMyReportsOpen]);
 
   useEffect(() => {
     if (!selectedPointId) {
@@ -711,6 +740,8 @@ export default function Home() {
           });
         }}
       />
+
+      <MobileBottomTabs isAdmin={isAdmin} />
 
       {selectedPointId ? (
         <button
