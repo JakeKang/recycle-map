@@ -1,4 +1,5 @@
 import { findTestAccountById } from "@/constants/test-accounts";
+import { isAdminUserId } from "@/lib/request-user";
 import { timingSafeEqual } from "node:crypto";
 import type { NextAuthOptions } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
@@ -116,12 +117,14 @@ export const authOptions: NextAuthOptions = {
     },
     async session({ session, token }) {
       if (session.user) {
-        session.user.id =
+        const resolvedId =
           typeof token.userId === "string"
             ? token.userId
             : typeof token.sub === "string"
               ? token.sub
               : "";
+        session.user.id = resolvedId;
+        session.user.isAdmin = resolvedId ? isAdminUserId(resolvedId) : false;
       }
 
       return session;

@@ -11,7 +11,7 @@ interface Bounds {
 }
 
 export type WorkspacePreset = "field-map" | "collection-inbox" | "trust-reports";
-export type MobileWorkspaceTab = "navigator" | "canvas" | "inbox";
+export type MobileWorkspaceTab = "navigator" | "canvas" | "inbox" | "reports";
 
 interface MapState {
   selectedCategory: PointCategory | "all";
