@@ -301,42 +301,88 @@ export default function AdminDashboardClient({ initialFilters }: AdminDashboardC
             <p className="mt-2 text-sm text-stone-600">조건에 맞는 신고가 없습니다.</p>
           ) : null}
           <div className="mt-3 space-y-2">
-            {reports.map((item) => (
-              <article
-                key={item.report.id}
-                className="rounded-xl border border-rose-900/10 bg-rose-50/40 p-3"
-              >
-                <p className="text-sm font-semibold text-stone-900">유형: {item.report.type}</p>
-                <p className="text-xs text-stone-600">사유: {item.report.reason ?? "(없음)"}</p>
-                {item.point ? (
-                  <p className="text-xs text-stone-600">
-                    대상: {item.point.title} ({item.point.address ?? "주소 없음"})
-                  </p>
-                ) : (
-                  <p className="text-xs text-stone-600">대상 포인트를 찾을 수 없습니다.</p>
-                )}
-                <div className="mt-2 flex gap-2">
-                  <button
-                    type="button"
-                    className="rounded-lg border border-emerald-900 bg-emerald-900 px-2.5 py-1 text-xs font-semibold text-emerald-50"
-                    onClick={() =>
-                      reportDecisionMutation.mutate({ id: item.report.id, status: "resolved" })
-                    }
-                  >
-                    승인
-                  </button>
-                  <button
-                    type="button"
-                    className="rounded-lg border border-stone-300 bg-white px-2.5 py-1 text-xs text-stone-700"
-                    onClick={() =>
-                      reportDecisionMutation.mutate({ id: item.report.id, status: "dismissed" })
-                    }
-                  >
-                    반려
-                  </button>
-                </div>
-              </article>
-            ))}
+            {reports.map((item) => {
+              const isThisItemPending =
+                reportDecisionMutation.isPending &&
+                reportDecisionMutation.variables?.id === item.report.id;
+              const isThisItemError =
+                reportDecisionMutation.isError &&
+                reportDecisionMutation.variables?.id === item.report.id;
+
+              return (
+                <article
+                  key={item.report.id}
+                  className="rounded-xl border border-rose-900/10 bg-rose-50/40 p-3"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="text-sm font-semibold text-stone-900">유형: {item.report.type}</p>
+                    <span
+                      className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                        item.report.status === "pending"
+                          ? "bg-amber-100 text-amber-800"
+                          : item.report.status === "resolved"
+                            ? "bg-emerald-100 text-emerald-800"
+                            : "bg-stone-100 text-stone-600"
+                      }`}
+                    >
+                      {item.report.status === "pending"
+                        ? "대기"
+                        : item.report.status === "resolved"
+                          ? "해결됨"
+                          : "기각됨"}
+                    </span>
+                  </div>
+                  <p className="text-xs text-stone-600">사유: {item.report.reason ?? "(없음)"}</p>
+                  {item.point ? (
+                    <p className="text-xs text-stone-600">
+                      대상: {item.point.title} ({item.point.address ?? "주소 없음"})
+                    </p>
+                  ) : (
+                    <p className="text-xs text-stone-600">대상 포인트를 찾을 수 없습니다.</p>
+                  )}
+                  {item.report.status === "pending" ? (
+                    <div className="mt-2 flex gap-2">
+                      <button
+                        type="button"
+                        disabled={reportDecisionMutation.isPending}
+                        className="rounded-lg border border-emerald-900 bg-emerald-900 px-2.5 py-1 text-xs font-semibold text-emerald-50 disabled:opacity-50"
+                        onClick={() =>
+                          reportDecisionMutation.mutate({ id: item.report.id, status: "resolved" })
+                        }
+                      >
+                        {isThisItemPending &&
+                        reportDecisionMutation.variables?.status === "resolved"
+                          ? "처리 중…"
+                          : "해결"}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={reportDecisionMutation.isPending}
+                        className="rounded-lg border border-stone-300 bg-white px-2.5 py-1 text-xs text-stone-700 disabled:opacity-50"
+                        onClick={() =>
+                          reportDecisionMutation.mutate({
+                            id: item.report.id,
+                            status: "dismissed",
+                          })
+                        }
+                      >
+                        {isThisItemPending &&
+                        reportDecisionMutation.variables?.status === "dismissed"
+                          ? "처리 중…"
+                          : "기각"}
+                      </button>
+                    </div>
+                  ) : null}
+                  {isThisItemError ? (
+                    <p className="mt-1 text-xs text-rose-700">
+                      {reportDecisionMutation.error instanceof Error
+                        ? reportDecisionMutation.error.message
+                        : "처리에 실패했습니다."}
+                    </p>
+                  ) : null}
+                </article>
+              );
+            })}
           </div>
         </section>
 
@@ -408,53 +454,96 @@ export default function AdminDashboardClient({ initialFilters }: AdminDashboardC
             <p className="mt-2 text-sm text-stone-600">조건에 맞는 수정 제안이 없습니다.</p>
           ) : null}
           <div className="mt-3 space-y-2">
-            {suggestions.map((item) => (
-              <article
-                key={item.suggestion.id}
-                className="rounded-xl border border-blue-900/10 bg-blue-50/40 p-3"
-              >
-                <p className="text-sm font-semibold text-stone-900">
-                  제안 카테고리: {categoryLabel(item.suggestion.payload.category)}
-                </p>
-                {item.point ? (
+            {suggestions.map((item) => {
+              const isThisItemPending =
+                suggestionDecisionMutation.isPending &&
+                suggestionDecisionMutation.variables?.id === item.suggestion.id;
+              const isThisItemError =
+                suggestionDecisionMutation.isError &&
+                suggestionDecisionMutation.variables?.id === item.suggestion.id;
+
+              return (
+                <article
+                  key={item.suggestion.id}
+                  className="rounded-xl border border-blue-900/10 bg-blue-50/40 p-3"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="text-sm font-semibold text-stone-900">
+                      제안 카테고리: {categoryLabel(item.suggestion.payload.category)}
+                    </p>
+                    <span
+                      className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                        item.suggestion.status === "pending"
+                          ? "bg-amber-100 text-amber-800"
+                          : item.suggestion.status === "applied"
+                            ? "bg-emerald-100 text-emerald-800"
+                            : "bg-stone-100 text-stone-600"
+                      }`}
+                    >
+                      {item.suggestion.status === "pending"
+                        ? "대기"
+                        : item.suggestion.status === "applied"
+                          ? "적용됨"
+                          : "기각됨"}
+                    </span>
+                  </div>
+                  {item.point ? (
+                    <p className="text-xs text-stone-600">
+                      현재 카테고리: {categoryLabel(item.point.category)}
+                    </p>
+                  ) : null}
                   <p className="text-xs text-stone-600">
-                    현재 카테고리: {categoryLabel(item.point.category)}
+                    주소: {item.suggestion.payload.address ?? "(없음)"}
                   </p>
-                ) : null}
-                <p className="text-xs text-stone-600">
-                  주소: {item.suggestion.payload.address ?? "(없음)"}
-                </p>
-                <p className="text-xs text-stone-600">
-                  설명: {item.suggestion.payload.description ?? "(없음)"}
-                </p>
-                <div className="mt-2 flex gap-2">
-                  <button
-                    type="button"
-                    className="rounded-lg border border-emerald-900 bg-emerald-900 px-2.5 py-1 text-xs font-semibold text-emerald-50"
-                    onClick={() =>
-                      suggestionDecisionMutation.mutate({
-                        id: item.suggestion.id,
-                        status: "applied",
-                      })
-                    }
-                  >
-                    적용
-                  </button>
-                  <button
-                    type="button"
-                    className="rounded-lg border border-stone-300 bg-white px-2.5 py-1 text-xs text-stone-700"
-                    onClick={() =>
-                      suggestionDecisionMutation.mutate({
-                        id: item.suggestion.id,
-                        status: "dismissed",
-                      })
-                    }
-                  >
-                    반려
-                  </button>
-                </div>
-              </article>
-            ))}
+                  <p className="text-xs text-stone-600">
+                    설명: {item.suggestion.payload.description ?? "(없음)"}
+                  </p>
+                  {item.suggestion.status === "pending" ? (
+                    <div className="mt-2 flex gap-2">
+                      <button
+                        type="button"
+                        disabled={suggestionDecisionMutation.isPending}
+                        className="rounded-lg border border-emerald-900 bg-emerald-900 px-2.5 py-1 text-xs font-semibold text-emerald-50 disabled:opacity-50"
+                        onClick={() =>
+                          suggestionDecisionMutation.mutate({
+                            id: item.suggestion.id,
+                            status: "applied",
+                          })
+                        }
+                      >
+                        {isThisItemPending &&
+                        suggestionDecisionMutation.variables?.status === "applied"
+                          ? "처리 중…"
+                          : "적용"}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={suggestionDecisionMutation.isPending}
+                        className="rounded-lg border border-stone-300 bg-white px-2.5 py-1 text-xs text-stone-700 disabled:opacity-50"
+                        onClick={() =>
+                          suggestionDecisionMutation.mutate({
+                            id: item.suggestion.id,
+                            status: "dismissed",
+                          })
+                        }
+                      >
+                        {isThisItemPending &&
+                        suggestionDecisionMutation.variables?.status === "dismissed"
+                          ? "처리 중…"
+                          : "기각"}
+                      </button>
+                    </div>
+                  ) : null}
+                  {isThisItemError ? (
+                    <p className="mt-1 text-xs text-rose-700">
+                      {suggestionDecisionMutation.error instanceof Error
+                        ? suggestionDecisionMutation.error.message
+                        : "처리에 실패했습니다."}
+                    </p>
+                  ) : null}
+                </article>
+              );
+            })}
           </div>
         </section>
 
