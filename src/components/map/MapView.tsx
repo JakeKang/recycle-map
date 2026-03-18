@@ -173,7 +173,6 @@ function MapView({
       zoomSnap={1}
       zoomAnimation
       fadeAnimation={false}
-      markerZoomAnimation={false}
     >
       <ZoomControl position="bottomright" />
       <TileLayer
