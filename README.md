@@ -126,3 +126,10 @@ MIT
 <div align="center">
   <sub>Next.js · Leaflet · Supabase · NextAuth · Tailwind CSS 기반으로 구축되었습니다.</sub>
 </div>
+
+---
+
+## 공공 API
+2026.03.20
+[기후에너지환경부_분리배출 정보조회 서비스](https://www.data.go.kr/data/15156866/openapi.do)
+- 초기 데이터 연계 가능성 확인
