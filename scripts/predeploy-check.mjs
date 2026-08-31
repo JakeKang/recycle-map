@@ -40,6 +40,7 @@ const requiredMigrationFiles = [
   "supabase/migrations/20260309151000_rls_policies.sql",
   "supabase/migrations/20260309162000_test_account_policies.sql",
   "supabase/migrations/20260309170000_delete_policies.sql",
+  "supabase/migrations/20260831090000_point_verification_votes.sql",
 ];
 
 function parseEnvFile(content) {
@@ -178,6 +179,7 @@ function validateProduction(envMap) {
   const allowDevHeader = envMap.get("ALLOW_DEV_USER_HEADER") ?? "false";
   const allowDbFallback = envMap.get("ALLOW_DB_FALLBACK_ON_ERROR") ?? "false";
   const forceLocalStore = envMap.get("FORCE_LOCAL_STORE") ?? "false";
+  const serviceRoleKey = envMap.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
   if (allowDevHeader !== "false") {
     fail(".env.production: ALLOW_DEV_USER_HEADER는 false여야 합니다.");
@@ -187,6 +189,11 @@ function validateProduction(envMap) {
   }
   if (forceLocalStore !== "false") {
     fail(".env.production: FORCE_LOCAL_STORE는 false여야 합니다.");
+  }
+  if (serviceRoleKey.length < 32 || isPlaceholderValue(serviceRoleKey)) {
+    fail(".env.production: 서버 저장소 접근을 위한 SUPABASE_SERVICE_ROLE_KEY를 설정해야 합니다.");
+  } else {
+    pass(".env.production: SUPABASE_SERVICE_ROLE_KEY 설정됨");
   }
 
   const enableTestAccounts = envMap.get("ENABLE_TEST_ACCOUNTS") ?? "false";

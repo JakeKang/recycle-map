@@ -223,18 +223,18 @@ export default function AdminDashboardClient({ initialFilters }: AdminDashboardC
   });
 
   return (
-    <main className="min-h-screen bg-[linear-gradient(160deg,#f5faf7_0%,#edf6f0_100%)] px-4 py-5">
-      <div className="mx-auto max-w-5xl space-y-4">
-        <header className="rounded-2xl border border-emerald-900/15 bg-white/90 px-4 py-3 shadow-sm">
-          <h1 className="text-xl font-semibold text-stone-900">관리자 검토 대시보드</h1>
+    <main className="min-h-screen bg-[var(--paper)] px-4 py-8 md:py-12">
+      <div className="mx-auto max-w-6xl">
+        <header className="border-y border-stone-300 py-5">
+          <h1 className="font-ledger text-3xl font-bold tracking-[-0.03em] text-[var(--ink)]">관리자 검토</h1>
           <p className="text-sm text-stone-600">
             신고와 수정 제안을 확인하고 승인/반려할 수 있습니다.
           </p>
         </header>
 
-        <section className="rounded-2xl border border-rose-900/10 bg-white/90 p-4 shadow-sm">
+        <section className="border-b border-stone-300 py-6">
           <div className="flex items-center justify-between gap-2">
-            <h2 className="text-base font-semibold text-stone-900">신고 목록</h2>
+            <h2 className="font-ledger text-xl font-bold text-[var(--ink)]">신고 목록</h2>
             <span className="text-xs text-stone-500">{reports.length}건</span>
           </div>
           <div className="mt-2 grid gap-2 md:grid-cols-4">
@@ -245,7 +245,7 @@ export default function AdminDashboardClient({ initialFilters }: AdminDashboardC
                 setReportStatus(next);
                 syncUrl({ reportStatus: next });
               }}
-              className="rounded-lg border border-stone-300 bg-white px-2 py-1.5 text-xs text-stone-700"
+              className="border border-stone-300 bg-[var(--paper-raised)] px-2 py-1.5 text-xs text-stone-700"
             >
               <option value="pending">상태: 대기</option>
               <option value="resolved">상태: 승인</option>
@@ -258,7 +258,7 @@ export default function AdminDashboardClient({ initialFilters }: AdminDashboardC
                 setReportType(next);
                 syncUrl({ reportType: next });
               }}
-              className="rounded-lg border border-stone-300 bg-white px-2 py-1.5 text-xs text-stone-700"
+              className="border border-stone-300 bg-[var(--paper-raised)] px-2 py-1.5 text-xs text-stone-700"
             >
               <option value="all">유형: 전체</option>
               <option value="incorrect_location">위치 오류</option>
@@ -275,7 +275,7 @@ export default function AdminDashboardClient({ initialFilters }: AdminDashboardC
                 setReportSort(next);
                 syncUrl({ reportSort: next });
               }}
-              className="rounded-lg border border-stone-300 bg-white px-2 py-1.5 text-xs text-stone-700"
+              className="border border-stone-300 bg-[var(--paper-raised)] px-2 py-1.5 text-xs text-stone-700"
             >
               <option value="newest">정렬: 최신순</option>
               <option value="oldest">정렬: 오래된순</option>
@@ -288,7 +288,7 @@ export default function AdminDashboardClient({ initialFilters }: AdminDashboardC
                 syncUrl({ reportQ: next });
               }}
               placeholder="사유/포인트 검색"
-              className="rounded-lg border border-stone-300 bg-white px-2 py-1.5 text-xs text-stone-700"
+              className="border border-stone-300 bg-[var(--paper-raised)] px-2 py-1.5 text-xs text-stone-700"
             />
           </div>
           {reportsLoading ? <p className="mt-2 text-sm text-stone-600">불러오는 중...</p> : null}
@@ -300,7 +300,7 @@ export default function AdminDashboardClient({ initialFilters }: AdminDashboardC
           {!reportsLoading && !reportsError && reports.length === 0 ? (
             <p className="mt-2 text-sm text-stone-600">조건에 맞는 신고가 없습니다.</p>
           ) : null}
-          <div className="mt-3 space-y-2">
+          <div className="mt-4 border-t border-stone-300">
             {reports.map((item) => {
               const isThisItemPending =
                 reportDecisionMutation.isPending &&
@@ -312,7 +312,7 @@ export default function AdminDashboardClient({ initialFilters }: AdminDashboardC
               return (
                 <article
                   key={item.report.id}
-                  className="rounded-xl border border-rose-900/10 bg-rose-50/40 p-3"
+                  className="border-b border-stone-300 py-4"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <p className="text-sm font-semibold text-stone-900">유형: {item.report.type}</p>
@@ -345,7 +345,7 @@ export default function AdminDashboardClient({ initialFilters }: AdminDashboardC
                       <button
                         type="button"
                         disabled={reportDecisionMutation.isPending}
-                        className="rounded-lg border border-emerald-900 bg-emerald-900 px-2.5 py-1 text-xs font-semibold text-emerald-50 disabled:opacity-50"
+                        className="border border-[var(--trust)] bg-[var(--trust)] px-2.5 py-1 text-xs font-semibold text-white disabled:opacity-50"
                         onClick={() =>
                           reportDecisionMutation.mutate({ id: item.report.id, status: "resolved" })
                         }
@@ -358,7 +358,7 @@ export default function AdminDashboardClient({ initialFilters }: AdminDashboardC
                       <button
                         type="button"
                         disabled={reportDecisionMutation.isPending}
-                        className="rounded-lg border border-stone-300 bg-white px-2.5 py-1 text-xs text-stone-700 disabled:opacity-50"
+                        className="border border-stone-300 bg-transparent px-2.5 py-1 text-xs text-stone-700 disabled:opacity-50"
                         onClick={() =>
                           reportDecisionMutation.mutate({
                             id: item.report.id,
@@ -386,9 +386,9 @@ export default function AdminDashboardClient({ initialFilters }: AdminDashboardC
           </div>
         </section>
 
-        <section className="rounded-2xl border border-blue-900/10 bg-white/90 p-4 shadow-sm">
+        <section className="border-b border-stone-300 py-6">
           <div className="flex items-center justify-between gap-2">
-            <h2 className="text-base font-semibold text-stone-900">수정 제안 목록</h2>
+            <h2 className="font-ledger text-xl font-bold text-[var(--ink)]">수정 제안 목록</h2>
             <span className="text-xs text-stone-500">{suggestions.length}건</span>
           </div>
           <div className="mt-2 grid gap-2 md:grid-cols-4">
@@ -399,7 +399,7 @@ export default function AdminDashboardClient({ initialFilters }: AdminDashboardC
                 setSuggestStatus(next);
                 syncUrl({ suggestStatus: next });
               }}
-              className="rounded-lg border border-stone-300 bg-white px-2 py-1.5 text-xs text-stone-700"
+              className="border border-stone-300 bg-[var(--paper-raised)] px-2 py-1.5 text-xs text-stone-700"
             >
               <option value="pending">상태: 대기</option>
               <option value="applied">상태: 적용</option>
@@ -412,7 +412,7 @@ export default function AdminDashboardClient({ initialFilters }: AdminDashboardC
                 setSuggestCategory(next);
                 syncUrl({ suggestCategory: next });
               }}
-              className="rounded-lg border border-stone-300 bg-white px-2 py-1.5 text-xs text-stone-700"
+              className="border border-stone-300 bg-[var(--paper-raised)] px-2 py-1.5 text-xs text-stone-700"
             >
               <option value="all">카테고리: 전체</option>
               {(Object.keys(CATEGORIES) as PointCategory[]).map((key) => (
@@ -428,7 +428,7 @@ export default function AdminDashboardClient({ initialFilters }: AdminDashboardC
                 setSuggestSort(next);
                 syncUrl({ suggestSort: next });
               }}
-              className="rounded-lg border border-stone-300 bg-white px-2 py-1.5 text-xs text-stone-700"
+              className="border border-stone-300 bg-[var(--paper-raised)] px-2 py-1.5 text-xs text-stone-700"
             >
               <option value="newest">정렬: 최신순</option>
               <option value="oldest">정렬: 오래된순</option>
@@ -441,7 +441,7 @@ export default function AdminDashboardClient({ initialFilters }: AdminDashboardC
                 syncUrl({ suggestQ: next });
               }}
               placeholder="설명/포인트 검색"
-              className="rounded-lg border border-stone-300 bg-white px-2 py-1.5 text-xs text-stone-700"
+              className="border border-stone-300 bg-[var(--paper-raised)] px-2 py-1.5 text-xs text-stone-700"
             />
           </div>
           {suggestionsLoading ? <p className="mt-2 text-sm text-stone-600">불러오는 중...</p> : null}
@@ -453,7 +453,7 @@ export default function AdminDashboardClient({ initialFilters }: AdminDashboardC
           {!suggestionsLoading && !suggestionsError && suggestions.length === 0 ? (
             <p className="mt-2 text-sm text-stone-600">조건에 맞는 수정 제안이 없습니다.</p>
           ) : null}
-          <div className="mt-3 space-y-2">
+          <div className="mt-4 border-t border-stone-300">
             {suggestions.map((item) => {
               const isThisItemPending =
                 suggestionDecisionMutation.isPending &&
@@ -465,7 +465,7 @@ export default function AdminDashboardClient({ initialFilters }: AdminDashboardC
               return (
                 <article
                   key={item.suggestion.id}
-                  className="rounded-xl border border-blue-900/10 bg-blue-50/40 p-3"
+                  className="border-b border-stone-300 py-4"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <p className="text-sm font-semibold text-stone-900">
@@ -503,7 +503,7 @@ export default function AdminDashboardClient({ initialFilters }: AdminDashboardC
                       <button
                         type="button"
                         disabled={suggestionDecisionMutation.isPending}
-                        className="rounded-lg border border-emerald-900 bg-emerald-900 px-2.5 py-1 text-xs font-semibold text-emerald-50 disabled:opacity-50"
+                        className="border border-[var(--trust)] bg-[var(--trust)] px-2.5 py-1 text-xs font-semibold text-white disabled:opacity-50"
                         onClick={() =>
                           suggestionDecisionMutation.mutate({
                             id: item.suggestion.id,
@@ -519,7 +519,7 @@ export default function AdminDashboardClient({ initialFilters }: AdminDashboardC
                       <button
                         type="button"
                         disabled={suggestionDecisionMutation.isPending}
-                        className="rounded-lg border border-stone-300 bg-white px-2.5 py-1 text-xs text-stone-700 disabled:opacity-50"
+                        className="border border-stone-300 bg-transparent px-2.5 py-1 text-xs text-stone-700 disabled:opacity-50"
                         onClick={() =>
                           suggestionDecisionMutation.mutate({
                             id: item.suggestion.id,

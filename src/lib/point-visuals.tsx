@@ -1,7 +1,14 @@
-import { CATEGORIES, PointCategory, PointStatus } from "@/types/point";
 import {
+  CATEGORIES,
+  PointCategory,
+  PointStatus,
+  PointVerificationStatus,
+} from "@/types/point";
+import {
+  BadgeCheck,
   Battery,
   CircleHelp,
+  Clock3,
   Lightbulb,
   Pill,
   Printer,
@@ -22,45 +29,45 @@ interface CategoryVisual {
 export const CATEGORY_VISUALS: Record<PointCategory, CategoryVisual> = {
   battery: {
     icon: Battery,
-    bgColor: "#f59e0b",
-    ringColor: "#d97706",
-    textColor: "#7c2d12",
-    softBg: "#fef3c7",
+    bgColor: "var(--category-battery)",
+    ringColor: "var(--category-battery-ring)",
+    textColor: "var(--category-battery-ink)",
+    softBg: "var(--category-battery-soft)",
   },
   electronics: {
     icon: Smartphone,
-    bgColor: "#3b82f6",
-    ringColor: "#2563eb",
-    textColor: "#1e3a8a",
-    softBg: "#dbeafe",
+    bgColor: "var(--category-electronics)",
+    ringColor: "var(--category-electronics-ring)",
+    textColor: "var(--category-electronics-ink)",
+    softBg: "var(--category-electronics-soft)",
   },
   medicine: {
     icon: Pill,
-    bgColor: "#ef4444",
-    ringColor: "#dc2626",
-    textColor: "#7f1d1d",
-    softBg: "#fee2e2",
+    bgColor: "var(--category-medicine)",
+    ringColor: "var(--category-medicine-ring)",
+    textColor: "var(--category-medicine-ink)",
+    softBg: "var(--category-medicine-soft)",
   },
   fluorescent: {
     icon: Lightbulb,
-    bgColor: "#8b5cf6",
-    ringColor: "#7c3aed",
-    textColor: "#4c1d95",
-    softBg: "#ede9fe",
+    bgColor: "var(--category-fluorescent)",
+    ringColor: "var(--category-fluorescent-ring)",
+    textColor: "var(--category-fluorescent-ink)",
+    softBg: "var(--category-fluorescent-soft)",
   },
   toner: {
     icon: Printer,
-    bgColor: "#64748b",
-    ringColor: "#475569",
-    textColor: "#334155",
-    softBg: "#e2e8f0",
+    bgColor: "var(--category-toner)",
+    ringColor: "var(--category-toner-ring)",
+    textColor: "var(--category-toner-ink)",
+    softBg: "var(--category-toner-soft)",
   },
   other: {
     icon: CircleHelp,
-    bgColor: "#10b981",
-    ringColor: "#059669",
-    textColor: "#14532d",
-    softBg: "#d1fae5",
+    bgColor: "var(--category-other)",
+    ringColor: "var(--category-other-ring)",
+    textColor: "var(--category-other-ink)",
+    softBg: "var(--category-other-soft)",
   },
 };
 
@@ -71,6 +78,7 @@ export function getCategoryVisual(category: PointCategory) {
 interface PointMarkerHtmlOptions {
   category: PointCategory;
   status: PointStatus;
+  verificationStatus: PointVerificationStatus;
   reportCount: number;
   selected: boolean;
 }
@@ -79,6 +87,18 @@ export function createPointMarkerHtml(options: PointMarkerHtmlOptions) {
   const visual = getCategoryVisual(options.category);
   const Icon = visual.icon;
   const showAlert = options.status === "reported" || options.reportCount >= 3;
+  const verificationColor =
+    options.verificationStatus === "verified"
+      ? "var(--trust)"
+      : options.verificationStatus === "inaccurate"
+        ? "var(--danger)"
+        : "var(--pending)";
+  const StateIcon =
+    showAlert || options.verificationStatus === "inaccurate"
+      ? TriangleAlert
+      : options.verificationStatus === "verified"
+        ? BadgeCheck
+        : Clock3;
 
   const marker = renderToStaticMarkup(
     <div
@@ -95,37 +115,55 @@ export function createPointMarkerHtml(options: PointMarkerHtmlOptions) {
           position: "absolute",
           width: options.selected ? "42px" : "36px",
           height: options.selected ? "42px" : "36px",
-          borderRadius: "9999px",
+          borderRadius: "var(--radius-pill)",
           backgroundColor: visual.bgColor,
-          border: `2px solid ${visual.ringColor}`,
+          border: `3px solid ${verificationColor}`,
           boxShadow: options.selected
-            ? `0 0 0 3px rgba(255,255,255,0.95), 0 10px 20px ${visual.ringColor}55`
-            : "0 8px 16px rgba(15, 23, 42, 0.2)",
+            ? "var(--shadow-marker-selected)"
+            : "var(--shadow-marker)",
           display: "grid",
           placeItems: "center",
           transition: "all 160ms ease",
         }}
       >
-        <Icon size={16} strokeWidth={2.25} color="#ffffff" />
+        <Icon size={16} strokeWidth={2.25} color="var(--white)" />
       </span>
 
-      {showAlert ? (
+      <span
+        style={{
+          position: "absolute",
+          top: "-3px",
+          right: "-2px",
+          width: "18px",
+          height: "18px",
+          borderRadius: "var(--radius-pill)",
+          backgroundColor: verificationColor,
+          border: "2px solid var(--white)",
+          display: "grid",
+          placeItems: "center",
+          boxShadow: "var(--shadow-marker-badge)",
+        }}
+      >
+        <StateIcon size={10} strokeWidth={2.6} color="var(--white)" />
+      </span>
+
+      {showAlert && options.verificationStatus !== "inaccurate" ? (
         <span
           style={{
             position: "absolute",
-            top: "-2px",
+            top: "22px",
             right: "-1px",
-            width: "17px",
-            height: "17px",
-            borderRadius: "9999px",
-            backgroundColor: "#dc2626",
-            border: "1.5px solid #ffffff",
+            width: "14px",
+            height: "14px",
+            borderRadius: "var(--radius-pill)",
+            backgroundColor: "var(--danger)",
+            border: "1.5px solid var(--white)",
             display: "grid",
             placeItems: "center",
-            boxShadow: "0 3px 8px rgba(127, 29, 29, 0.5)",
+            boxShadow: "var(--shadow-marker-alert)",
           }}
         >
-          <TriangleAlert size={11} strokeWidth={2.5} color="#ffffff" />
+          <TriangleAlert size={9} strokeWidth={2.5} color="var(--white)" />
         </span>
       ) : null}
 
@@ -137,8 +175,8 @@ export function createPointMarkerHtml(options: PointMarkerHtmlOptions) {
           height: "14px",
           transform: "rotate(45deg)",
           backgroundColor: visual.bgColor,
-          borderRight: `2px solid ${visual.ringColor}`,
-          borderBottom: `2px solid ${visual.ringColor}`,
+          borderRight: `2px solid ${verificationColor}`,
+          borderBottom: `2px solid ${verificationColor}`,
           borderRadius: "3px",
         }}
       />
@@ -149,20 +187,20 @@ export function createPointMarkerHtml(options: PointMarkerHtmlOptions) {
 }
 
 export function getCategoryChipStyle(category: PointCategory, active: boolean) {
-  const visual = getCategoryVisual(category);
+  void category;
 
   if (active) {
     return {
-      backgroundColor: visual.bgColor,
-      color: "#ffffff",
-      borderColor: visual.ringColor,
+      backgroundColor: "var(--trust)",
+      color: "var(--white)",
+      borderColor: "var(--trust)",
     };
   }
 
   return {
-    backgroundColor: visual.softBg,
-    color: visual.textColor,
-    borderColor: `${visual.ringColor}55`,
+    backgroundColor: "transparent",
+    color: "var(--ink-muted)",
+    borderColor: "var(--line)",
   };
 }
 

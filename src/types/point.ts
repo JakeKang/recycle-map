@@ -1,4 +1,4 @@
-import type { PublicReview } from "@/lib/public-mappers";
+import type { PublicPoint, PublicReview } from "@/lib/public-mappers";
 import { Review } from "@/types/review";
 
 export const CATEGORIES = {
@@ -13,6 +13,17 @@ export const CATEGORIES = {
 export type PointCategory = keyof typeof CATEGORIES;
 export type PointStatus = "pending" | "active" | "reported" | "inactive";
 export type PointListStatus = PointStatus | "visible";
+export type PointVerificationStatus = "pending" | "verified" | "inaccurate";
+export type VerificationVoteValue = "accurate" | "inaccurate";
+
+export interface VerificationVote {
+  id: string;
+  pointId: string;
+  userId: string;
+  value: VerificationVoteValue;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export interface CollectionPoint {
   id: string;
@@ -27,6 +38,10 @@ export interface CollectionPoint {
   avgRating: number;
   reviewCount: number;
   reportCount: number;
+  verificationStatus: PointVerificationStatus;
+  accurateVoteCount: number;
+  inaccurateVoteCount: number;
+  verificationOverride: PointVerificationStatus | null;
   verifiedAt: string | null;
   photoIds?: string[];
   createdAt: string;
@@ -53,8 +68,11 @@ export interface PointQuery {
   neLng?: number;
 }
 
-export type PublicPointDetail = Omit<CollectionPoint, "userId"> & {
+export type PublicPointDetail = PublicPoint & {
   reviews: PublicReview[];
+  currentUserVote: VerificationVoteValue | null;
+  canVote: boolean;
+  voteEligibility: "eligible" | "login_required" | "owner";
 };
 
 export interface PointDetail extends CollectionPoint {

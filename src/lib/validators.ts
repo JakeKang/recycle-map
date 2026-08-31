@@ -56,3 +56,11 @@ export const adminReportDecisionSchema = z.object({
 export const adminSuggestionDecisionSchema = z.object({
   status: z.enum(["applied", "dismissed"]),
 });
+
+export const verificationVoteSchema = z.object({
+  value: z.enum(["accurate", "inaccurate"]),
+});
+
+export const adminVerificationDecisionSchema = z.object({
+  status: z.enum(["pending", "verified", "inaccurate"]),
+});

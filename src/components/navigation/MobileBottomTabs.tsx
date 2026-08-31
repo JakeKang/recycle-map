@@ -49,7 +49,7 @@ export default function MobileBottomTabs({ isAdmin, onTabChange }: MobileBottomT
 
   return (
     <nav
-      className="fixed bottom-0 inset-x-0 z-[1300] flex items-stretch border-t border-emerald-900/10 bg-white/95 backdrop-blur-sm md:hidden"
+      className="fixed inset-x-0 bottom-0 z-[1300] flex items-stretch border-t border-stone-300 bg-[var(--paper-raised)] md:hidden"
       aria-label="하단 탭 내비게이션"
     >
       {visibleTabs.map(({ id, label, Icon, badgeCount }) => {
@@ -63,7 +63,7 @@ export default function MobileBottomTabs({ isAdmin, onTabChange }: MobileBottomT
             onClick={() => handleSelect(id)}
             aria-current={isActive ? "page" : undefined}
             className={`relative flex flex-1 flex-col items-center justify-center gap-0.5 py-2.5 text-[10px] font-semibold transition-colors ${
-              isActive ? "text-emerald-900" : "text-stone-400"
+              isActive ? "text-[var(--trust)]" : "text-stone-500"
             }`}
           >
             <span className="relative">
@@ -76,7 +76,7 @@ export default function MobileBottomTabs({ isAdmin, onTabChange }: MobileBottomT
             </span>
             <span>{label}</span>
             {isActive ? (
-              <span className="absolute bottom-0 left-1/2 h-0.5 w-8 -translate-x-1/2 rounded-full bg-emerald-900" />
+              <span className="absolute bottom-0 left-1/2 h-0.5 w-8 -translate-x-1/2 bg-[var(--trust)]" />
             ) : null}
           </button>
         );

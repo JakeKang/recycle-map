@@ -1,5 +1,11 @@
 import { haversineMeters } from "@/lib/distance";
-import { CollectionPoint, PointQuery } from "@/types/point";
+import { deriveVerificationStatus } from "@/lib/point-verification";
+import {
+  CollectionPoint,
+  PointQuery,
+  VerificationVote,
+  VerificationVoteValue,
+} from "@/types/point";
 import { Report } from "@/types/report";
 import { Review } from "@/types/review";
 import { PointSuggestion } from "@/types/suggestion";
@@ -55,6 +61,10 @@ function createSeedPoints(): CollectionPoint[] {
       avgRating: 4.5,
       reviewCount: 2,
       reportCount: 0,
+      verificationStatus: "verified",
+      accurateVoteCount: 7,
+      inaccurateVoteCount: 1,
+      verificationOverride: null,
       verifiedAt: now(),
       photoIds: [],
       createdAt: now(),
@@ -73,6 +83,10 @@ function createSeedPoints(): CollectionPoint[] {
       avgRating: 0,
       reviewCount: 0,
       reportCount: 0,
+      verificationStatus: "pending",
+      accurateVoteCount: 2,
+      inaccurateVoteCount: 0,
+      verificationOverride: null,
       verifiedAt: null,
       photoIds: [],
       createdAt: now(),
@@ -118,6 +132,10 @@ function createSeedPoints(): CollectionPoint[] {
       avgRating: Number(((index % 5) + 1).toFixed(1)),
       reviewCount,
       reportCount,
+      verificationStatus: status === "active" ? "verified" : "inaccurate",
+      accurateVoteCount: status === "active" ? 5 + (index % 8) : 1,
+      inaccurateVoteCount: status === "reported" ? 3 + (index % 3) : index % 2,
+      verificationOverride: null,
       verifiedAt: status === "active" ? now() : null,
       photoIds: [],
       createdAt: now(),
@@ -155,12 +173,47 @@ const reviews: Review[] = createSeedReviews();
 
 const reports: Report[] = [];
 const suggestions: PointSuggestion[] = [];
+const verificationVotes: VerificationVote[] = verificationVotesForSeeds();
 
 export function resetStoreForTests() {
   points.splice(0, points.length, ...createSeedPoints());
   reviews.splice(0, reviews.length, ...createSeedReviews());
   reports.splice(0, reports.length);
   suggestions.splice(0, suggestions.length);
+  verificationVotes.splice(
+    0,
+    verificationVotes.length,
+    ...verificationVotesForSeeds(),
+  );
+}
+
+function verificationVotesForSeeds(): VerificationVote[] {
+  return [
+    ...Array.from({ length: 7 }, (_, index) => ({
+      id: `v-seed-1-${index + 1}`,
+      pointId: "seed-1",
+      userId: `seed-verifier-${index + 1}`,
+      value: "accurate" as const,
+      createdAt: now(),
+      updatedAt: now(),
+    })),
+    {
+      id: "v-seed-1-inaccurate",
+      pointId: "seed-1",
+      userId: "seed-verifier-8",
+      value: "inaccurate",
+      createdAt: now(),
+      updatedAt: now(),
+    },
+    ...Array.from({ length: 2 }, (_, index) => ({
+      id: `v-seed-2-${index + 1}`,
+      pointId: "seed-2",
+      userId: `seed-verifier-${index + 9}`,
+      value: "accurate" as const,
+      createdAt: now(),
+      updatedAt: now(),
+    })),
+  ];
 }
 
 function inBounds(point: CollectionPoint, query: PointQuery) {
@@ -213,6 +266,25 @@ function recalcPendingReportCount(pointId: string) {
   target.reportCount = pendingCount;
   target.status = pendingCount >= 5 ? "reported" : "active";
   target.updatedAt = now();
+}
+
+function recalcVerification(pointId: string) {
+  const target = points.find((point) => point.id === pointId);
+  if (!target) {
+    return null;
+  }
+
+  const pointVotes = verificationVotes.filter((vote) => vote.pointId === pointId);
+  target.accurateVoteCount = pointVotes.filter((vote) => vote.value === "accurate").length;
+  target.inaccurateVoteCount = pointVotes.filter(
+    (vote) => vote.value === "inaccurate",
+  ).length;
+  target.verificationStatus =
+    target.verificationOverride ??
+    deriveVerificationStatus(target.accurateVoteCount, target.inaccurateVoteCount);
+  target.verifiedAt = target.verificationStatus === "verified" ? now() : null;
+  target.updatedAt = now();
+  return target;
 }
 
 export const store = {
@@ -278,6 +350,70 @@ export const store = {
     };
     points[idx] = next;
     return next;
+  },
+
+  getVerificationVote(pointId: string, userId: string) {
+    return (
+      verificationVotes.find(
+        (vote) => vote.pointId === pointId && vote.userId === userId,
+      ) ?? null
+    );
+  },
+
+  castVerificationVote(
+    pointId: string,
+    userId: string,
+    value: VerificationVoteValue,
+  ) {
+    const existingIndex = verificationVotes.findIndex(
+      (vote) => vote.pointId === pointId && vote.userId === userId,
+    );
+    let vote: VerificationVote;
+
+    if (existingIndex >= 0) {
+      vote = {
+        ...verificationVotes[existingIndex],
+        value,
+        updatedAt: now(),
+      };
+      verificationVotes[existingIndex] = vote;
+    } else {
+      vote = {
+        id: crypto.randomUUID(),
+        pointId,
+        userId,
+        value,
+        createdAt: now(),
+        updatedAt: now(),
+      };
+      verificationVotes.unshift(vote);
+    }
+
+    const point = recalcVerification(pointId);
+    return point ? { point, vote } : null;
+  },
+
+  resetPointVerification(pointId: string) {
+    for (let index = verificationVotes.length - 1; index >= 0; index -= 1) {
+      if (verificationVotes[index].pointId === pointId) {
+        verificationVotes.splice(index, 1);
+      }
+    }
+
+    const pointIndex = points.findIndex((point) => point.id === pointId);
+    if (pointIndex < 0) {
+      return null;
+    }
+    points[pointIndex] = {
+      ...points[pointIndex],
+      verificationStatus: "pending",
+      accurateVoteCount: 0,
+      inaccurateVoteCount: 0,
+      verificationOverride: null,
+      verifiedAt: null,
+      updatedAt: now(),
+    };
+    return points[pointIndex];
   },
 
   hasDuplicateNearby(lat: number, lng: number, category: string, meters = 50) {

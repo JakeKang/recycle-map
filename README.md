@@ -1,141 +1,124 @@
 <div align="center">
-  <h1>♻ RecycleMap</h1>
+  <h1>RecycleMap</h1>
   <p><strong>우리동네 자원순환 알리미</strong></p>
-  <p>주변 재활용 수거함 위치를 지도에서 확인하고,<br>직접 제보·수정·신고·리뷰로 데이터를 함께 개선하는 지도 서비스</p>
+  <p>수거함을 찾고, 시민 제보와 검증 투표로 위치 정보의 신뢰도를 함께 관리하는 지도 서비스</p>
 </div>
 
 <p align="center">
   <a href="https://github.com/JakeKang/recycle-map/actions/workflows/release-gate.yml">
     <img src="https://github.com/JakeKang/recycle-map/actions/workflows/release-gate.yml/badge.svg" alt="Release Gate" />
   </a>
-  <img src="https://img.shields.io/badge/status-개발%20진행중-yellow" alt="개발 진행중" />
+  <img src="https://img.shields.io/badge/status-v1.0-166534" alt="v1.0" />
   <img src="https://img.shields.io/badge/next.js-16-black" alt="Next.js 16" />
   <img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT" />
 </p>
 
-> **🚧 현재 개발 진행중인 프로젝트입니다.**  
-> MVP 기능 구현 및 안정화가 진행 중이며, 지속적인 변경이 발생할 수 있습니다.
+## 화면
 
----
-
-## 스크린샷
-
-| 홈 (데스크톱) | 수거함 상세 | 모바일 지도 | 모바일 메뉴 |
+| 데스크톱 지도 | 모바일 지도 | 위치 검증 | 관리자 검토 |
 |:---:|:---:|:---:|:---:|
-| ![홈 데스크톱](./readme-media/home-desktop.png) | ![상세 데스크톱](./readme-media/detail-desktop.png) | ![모바일](./readme-media/dummy-mobile-map.png) | ![메뉴](./readme-media/dummy-mobile-menu.png) |
+| ![데스크톱 지도](./docs/manual/images/02-home-desktop.png) | ![모바일 지도](./docs/manual/images/02-home-mobile.png) | ![위치 검증](./docs/manual/images/03-location-pending.png) | ![관리자 검토](./docs/manual/images/08-admin-reports.png) |
 
----
-
-## 핵심 기능
+## v1.0 핵심 기능
 
 | 기능 | 설명 |
-|------|------|
-| **지도 탐색** | Leaflet 기반 수거함 지도, 카테고리별 커스텀 마커, 현재 위치 자동 진입 |
-| **수거함 제보** | 지도 클릭으로 위치 지정, Daum 주소 검색, 사진 업로드 |
-| **커뮤니티 관리** | 리뷰 작성, 위치 신고, 수정 제안으로 정보 정확성 유지 |
-| **내 제보 관리** | 제보 이력 확인 및 딥링크(`/?reports=1`) 직접 진입 |
-| **URL 딥링크** | `q` · `category` · `point` · `sheet` · `reports` 상태 동기화 및 뒤로가기 복원 |
-| **반응형 UI** | 모바일 지도 우선(햄버거 드로어) / 데스크톱 사이드 패널 |
-| **관리자 대시보드** | 신고 처리, 수정 제안 승인, 포인트 상태 관리 |
-| **계정 관리** | `/account` 페이지, 소셜 로그인(Google · Kakao · Naver) |
+| --- | --- |
+| 지도 탐색 | Leaflet 지도, 검색·분류, 지도 범위 목록, URL 딥링크와 뒤로가기 복원 |
+| 위치 제보 | 지도 좌표 선택, Daum 주소 검색, 현장 사진, 50m 동일 분류 중복 방지, 일일 5건 제한 |
+| 시민 검증 | 로그인 사용자별 위치당 한 표, 작성자 자기 투표 차단, 선택 변경 지원 |
+| 신뢰 판정 | 정확 5표 이상·찬성률 70% 이상이면 `확정`, 잘못 3표 이상이면 `정확하지 않음`, 그 외 `확인 중` |
+| 정보 관리 | 리뷰, 문제 신고, 정보 수정 제안, 작성자 제보 편집과 편집 후 검증 초기화 |
+| 관리자 운영 | 검증 상태 수동 조정, 신고 해결·기각, 수정 제안 적용·기각, 대기 건수 표시 |
+| 반응형 UI | 데스크톱 탐색 레일·지도·검증 원장, 모바일 지도·메뉴·단계형 상세 시트 |
+| 인증·계정 | NextAuth 테스트 계정과 선택적 Google·Kakao·Naver 로그인, 회원정보와 역할별 이동 |
 
----
+전체 사용법과 장애 복구는 [사용자 매뉴얼](./docs/manual/README.md), 런타임 경계는 [시스템 구조](./docs/architecture.md)를 참고하세요.
 
 ## 빠른 시작
 
 ```bash
-# 저장소 복제
 git clone https://github.com/JakeKang/recycle-map.git
 cd recycle-map
-
-# 의존성 설치
 pnpm install
 
-# 환경 변수 설정 (아래 환경 변수 섹션 참고)
-# .env.development 파일을 생성하세요
-
-# 개발 서버 시작
+# 아래 표를 참고해 .env.development를 준비합니다.
 pnpm dev
 ```
 
-앱: `http://localhost:3000`
-
----
+로컬 앱은 기본적으로 `http://localhost:3000`에서 실행됩니다.
 
 ## 환경 변수
 
-| 변수 | 설명 | 필수 |
-|------|------|:---:|
-| `NEXTAUTH_URL` | 서비스 URL (production은 `https://` 필수) | ✅ |
-| `NEXTAUTH_SECRET` | NextAuth 서명 비밀키 (32자 이상) | ✅ |
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase 프로젝트 URL | ✅ |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase Anon 공개 키 | ✅ |
-| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Google OAuth | 선택 |
-| `KAKAO_CLIENT_ID` / `KAKAO_CLIENT_SECRET` | 카카오 OAuth | 선택 |
-| `ALLOW_DEV_USER_HEADER` | 개발용 헤더 인증 허용 (dev only: `true`) | 개발 |
-| `FORCE_LOCAL_STORE` | DB 없이 메모리 스토어 사용 | 개발 |
+### 공통·운영 필수
 
-> ⚠️ 프로덕션에서는 `ALLOW_DEV_USER_HEADER=false`, `FORCE_LOCAL_STORE=false`를 반드시 확인하세요.  
-> 민감 정보는 절대 Git에 커밋하지 않습니다.
+| 변수 | 설명 |
+| --- | --- |
+| `NEXTAUTH_URL` | 서비스 URL. 운영에서는 HTTPS 필수 |
+| `NEXTAUTH_SECRET` | NextAuth 서명 비밀키. 운영에서는 32자 이상 |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase 프로젝트 URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase 공개 키 |
+| `SUPABASE_SERVICE_ROLE_KEY` | 서버 전용 DB 접근 키. 운영 필수, 클라이언트 노출 금지 |
+| `ADMIN_USER_IDS` | 관리자 사용자 ID의 쉼표 구분 목록 |
 
----
+### 선택 설정
+
+| 변수 | 설명 |
+| --- | --- |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Google OAuth |
+| `KAKAO_CLIENT_ID` / `KAKAO_CLIENT_SECRET` | Kakao OAuth |
+| `NAVER_CLIENT_ID` / `NAVER_CLIENT_SECRET` | Naver OAuth |
+| `ENABLE_TEST_ACCOUNTS` / `TEST_ACCOUNT_PASSWORD` | 테스트 계정 로그인. 운영 활성화 시 패스코드 12자 이상 |
+| `NEXT_PUBLIC_MAP_TILE_URL` | Leaflet 타일 URL 템플릿 |
+| `NEXT_PUBLIC_MAP_TILE_ATTRIBUTION` | 타일 저작권 표시 |
+| `LOCAL_STORAGE_ROOT_DIR` | 로컬 사진 저장 루트. 기본값은 프로젝트 `data` 폴더 |
+| `FORCE_LOCAL_STORE` | `true`이면 Supabase 대신 메모리 저장소 사용. 개발·테스트 전용 |
+| `ALLOW_DB_FALLBACK_ON_ERROR` | DB 오류 시 메모리 폴백. 운영에서는 반드시 `false` |
+| `ALLOW_DEV_USER_HEADER` / `DEV_USER_HEADER_SECRET` | 비운영 개발 인증 헤더 |
+| `NEXT_PUBLIC_DEV_USER_ID` | 개발 UI와 API 요청에 사용할 개발 사용자 ID |
+
+프로덕션에서는 `ALLOW_DEV_USER_HEADER=false`, `ALLOW_DB_FALLBACK_ON_ERROR=false`, `FORCE_LOCAL_STORE=false`를 유지합니다. 민감 정보는 Git에 커밋하지 않습니다.
+
+## 데이터베이스 적용
+
+`supabase/migrations`의 SQL을 시간순으로 적용합니다. v1.0 시민 검증 기능에는 `20260831090000_point_verification_votes.sql`이 필요합니다. 배포 전 다음 명령으로 개발·운영 환경과 마이그레이션 구성을 검사합니다.
+
+```bash
+pnpm predeploy:check:full
+```
+
+## 개발과 품질 검사
+
+```bash
+pnpm lint             # ESLint
+pnpm test             # Vitest 단위·통합 테스트
+pnpm test:e2e         # Playwright 사용자 흐름
+pnpm build            # 프로덕션 빌드
+pnpm security:audit   # 운영 의존성 보안 감사
+pnpm perf:smoke       # 반복 가능한 로컬 대량 데이터 성능 스모크
+pnpm smoke:full       # 스모크 + E2E + lint + build
+```
+
+CI는 pull request와 `main` 푸시에서 릴리스 게이트를 실행합니다.
 
 ## 기술 스택
 
-| 영역 | 기술 |
-|------|------|
-| 프레임워크 | [Next.js 16](https://nextjs.org) (App Router) |
-| 언어 | TypeScript 5 |
-| 지도 | [Leaflet](https://leafletjs.com) + react-leaflet + markercluster |
-| 서버 상태 | [TanStack Query v5](https://tanstack.com/query) |
-| 클라이언트 상태 | [Zustand](https://zustand-demo.pmnd.rs) |
-| 인증 | [NextAuth.js](https://next-auth.js.org) |
-| DB | [Supabase](https://supabase.com) (PostgreSQL) + 메모리 폴백 스토어 |
-| 스타일 | [Tailwind CSS](https://tailwindcss.com) |
-| 입력 검증 | [Zod](https://zod.dev) |
-| 단위 테스트 | [Vitest](https://vitest.dev) v4 (13 files / 33 tests) |
-| E2E 테스트 | [Playwright](https://playwright.dev) v1.58 (5 tests) |
+Next.js 16 App Router, React 19, TypeScript 5, Leaflet, TanStack Query, Zustand, NextAuth, Supabase PostgreSQL, Tailwind CSS, Zod, Vitest, Playwright를 사용합니다.
 
----
+## 문서
 
-## 개발 관련
+- [문서 인덱스](./docs/README.md)
+- [시스템 구조](./docs/architecture.md)
+- [사용자 매뉴얼](./docs/manual/README.md)
+- [QA 및 장애 복구](./docs/manual/09-qa-and-recovery.md)
+- [화면 커버리지](./docs/manual/coverage-matrix.md)
 
-```bash
-pnpm lint       # 린트 검사
-pnpm test       # 단위·통합 테스트
-pnpm test:e2e   # E2E 테스트
-pnpm build      # 프로덕션 빌드
-```
+## 향후 검토
 
-CI는 모든 PR / `main` 푸시에서 게이트 파이프라인을 자동 실행합니다.
+- 공공 API 연계를 통한 초기 데이터 확장 가능성 검토
+- 운영 규모에 맞춘 사진 저장소와 관측성 인프라 확장
 
----
-
-## 이슈
-
-- **버그 리포트 / 기능 제안**: [GitHub Issues](https://github.com/JakeKang/recycle-map/issues)
-
----
+버그 리포트와 기능 제안은 [GitHub Issues](https://github.com/JakeKang/recycle-map/issues)에 등록합니다.
 
 ## 라이선스
 
 MIT
-
----
-
-<div align="center">
-  <sub>Next.js · Leaflet · Supabase · NextAuth · Tailwind CSS 기반으로 구축되었습니다.</sub>
-</div>
-
----
-
-## 고민중인 사항
-2026.03.20
-
-- [ ] 1. 공공 API 연계를 통한 초기 데이터 구축 가능성 확인
-
-   - [기후에너지환경부_분리배출 정보조회 서비스](https://www.data.go.kr/data/15156866/openapi.do)
-
-- [ ] 2. 제보를 통한 위치 변경 투명성 및 신뢰성 확보
-   - 다수 제보 or 제보 내용 리스트를 통한 투표 시스템
-   - 일정 투표수 확보시 통과를 통한 자동 반영 시스템 (악용 방지를 위한 대책 기획이 필요)

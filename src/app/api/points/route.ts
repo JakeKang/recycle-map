@@ -176,6 +176,10 @@ export async function POST(request: NextRequest) {
     avgRating: 0,
     reviewCount: 0,
     reportCount: 0,
+    verificationStatus: "pending",
+    accurateVoteCount: 0,
+    inaccurateVoteCount: 0,
+    verificationOverride: null,
     verifiedAt: null,
     photoIds: parsed.data.photoIds,
   });

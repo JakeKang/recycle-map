@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { performance } from "node:perf_hooks";
 import { spawn } from "node:child_process";
-import { chromium } from "playwright";
+import { chromium } from "@playwright/test";
 
 const rootDir = process.cwd();
 const port = Number(process.env.PERF_PORT ?? 3401);
@@ -11,7 +11,7 @@ const forceLocalStore = process.env.PERF_FORCE_LOCAL_STORE !== "false";
 const allowDbFallback = process.env.PERF_ALLOW_DB_FALLBACK !== "false";
 const status = "visible";
 
-const baseUrl = `http://127.0.0.1:${port}`;
+const baseUrl = `http://localhost:${port}`;
 const queryString = new URLSearchParams({
   status,
   sw_lat: "37.35",
@@ -90,7 +90,7 @@ async function measureUi(base, options) {
     const startedAt = performance.now();
 
     await page.goto(base, { waitUntil: "domcontentloaded" });
-    await page.getByRole("heading", { name: "우리동네 자원순환 알리미" }).waitFor({ timeout: 45_000 });
+    await page.getByRole("heading", { name: "RecycleMap" }).waitFor({ timeout: 45_000 });
     const countLocator = page.getByText(/전체 · \d+개/).first();
     await countLocator.waitFor({ timeout: 45_000 });
     if (expectPositiveCount) {
@@ -187,7 +187,7 @@ ${rows}
 - Screenshot: readme-media/${uiMetrics.screenshotName}
 
 ## Interpretation
-- This smoke report validates MVP behavior under synthetic high-volume seed data without introducing production-only complexity.
+- This smoke report validates v1.0 behavior under synthetic high-volume seed data without introducing production-only complexity.
 - If client/server averages regress significantly or marker flicker becomes visible, follow Step 27 escalation path (supercluster -> canvas/WebGL review).
 `;
 }

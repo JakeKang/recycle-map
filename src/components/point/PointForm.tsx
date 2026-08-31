@@ -143,21 +143,16 @@ export default function PointForm({ position, onSuccess }: PointFormProps) {
   return (
     <form
       onSubmit={handleSubmit}
-      className="space-y-3 rounded-3xl border border-emerald-900/10 bg-[rgba(254,255,251,0.94)] p-3 shadow-[0_12px_30px_rgba(8,42,22,0.08)]"
+      className="space-y-3"
     >
-      <div>
-        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-emerald-900/60">
-          Report
-        </p>
-        <h2 className="mt-1 text-sm font-semibold text-stone-900">수거함 제보 등록</h2>
-      </div>
+      <h2 className="font-ledger text-lg font-bold text-[var(--ink)]">수거함 제보</h2>
 
-      <p className="rounded-lg border border-emerald-900/15 bg-emerald-50 px-2 py-1 text-[11px] text-emerald-900/80">
+      <p className="border-y border-stone-300 py-2 text-[11px] tabular-nums text-[var(--trust)]">
         좌표: {position ? `${position.lat.toFixed(5)}, ${position.lng.toFixed(5)}` : "지도에서 위치를 선택하세요"}
       </p>
 
       <input
-        className="w-full rounded-xl border border-emerald-900/20 bg-white px-3 py-2 text-sm text-stone-800 outline-none ring-emerald-600/40 placeholder:text-stone-400 focus:ring"
+        className="w-full border border-stone-300 bg-white px-3 py-2 text-sm text-stone-800 outline-none placeholder:text-stone-400"
         placeholder="제목 (예: OO아파트 폐건전지함)"
         value={title}
         onChange={(event) => setTitle(event.target.value)}
@@ -168,7 +163,7 @@ export default function PointForm({ position, onSuccess }: PointFormProps) {
       ) : null}
 
       <select
-        className="w-full rounded-xl border border-emerald-900/20 bg-white px-3 py-2 text-sm text-stone-800 outline-none ring-emerald-600/40 focus:ring"
+        className="w-full border border-stone-300 bg-white px-3 py-2 text-sm text-stone-800 outline-none"
         value={category}
         onChange={(event) => setCategory(event.target.value as PointCategory)}
       >
@@ -180,7 +175,7 @@ export default function PointForm({ position, onSuccess }: PointFormProps) {
       </select>
 
       <input
-        className="w-full rounded-xl border border-emerald-900/20 bg-white px-3 py-2 text-sm text-stone-800 outline-none ring-emerald-600/40 placeholder:text-stone-400 focus:ring"
+        className="w-full border border-stone-300 bg-white px-3 py-2 text-sm text-stone-800 outline-none placeholder:text-stone-400"
         placeholder="주소 (선택)"
         value={address}
         onChange={(event) => setAddress(event.target.value)}
@@ -188,16 +183,16 @@ export default function PointForm({ position, onSuccess }: PointFormProps) {
       <AddressSearch onSelect={setAddress} />
 
       <textarea
-        className="h-24 w-full rounded-xl border border-emerald-900/20 bg-white px-3 py-2 text-sm text-stone-800 outline-none ring-emerald-600/40 placeholder:text-stone-400 focus:ring"
+        className="h-24 w-full border border-stone-300 bg-white px-3 py-2 text-sm text-stone-800 outline-none placeholder:text-stone-400"
         placeholder="상세 설명 (선택, 운영 시간/위치 팁 등)"
         value={description}
         onChange={(event) => setDescription(event.target.value)}
       />
 
-      <div className="space-y-2 rounded-xl border border-emerald-900/15 bg-white/80 p-2">
+      <div className="space-y-2 border-y border-stone-300 py-3">
         <div className="flex items-center justify-between">
           <p className="text-xs font-semibold text-stone-700">현장 사진 (선택, 최대 5장)</p>
-          <label className="inline-flex cursor-pointer items-center gap-1 rounded-lg border border-emerald-900/20 bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-900 transition hover:bg-emerald-100">
+          <label className="inline-flex cursor-pointer items-center gap-1 border border-stone-300 bg-transparent px-2 py-1 text-xs font-semibold text-[var(--trust)] transition hover:border-stone-500">
             <ImagePlus size={13} /> 사진 추가
             <input
               type="file"
@@ -213,7 +208,7 @@ export default function PointForm({ position, onSuccess }: PointFormProps) {
         {uploadedPhotos.length > 0 ? (
           <div className="grid grid-cols-3 gap-2">
             {uploadedPhotos.map((photo) => (
-              <div key={photo.id} className="relative overflow-hidden rounded-lg border border-stone-200 bg-stone-50">
+              <div key={photo.id} className="relative overflow-hidden border border-stone-300 bg-stone-50">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={photo.readUrl} alt={photo.name} className="h-20 w-full object-cover" />
                 <button
@@ -221,7 +216,7 @@ export default function PointForm({ position, onSuccess }: PointFormProps) {
                   onClick={() => {
                     setUploadedPhotos((prev) => prev.filter((item) => item.id !== photo.id));
                   }}
-                  className="absolute right-1 top-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-[rgba(15,23,42,0.75)] text-white"
+                  className="absolute right-1 top-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-[var(--overlay-control)] text-white"
                   aria-label="첨부 이미지 제거"
                 >
                   <X size={12} />
@@ -238,10 +233,15 @@ export default function PointForm({ position, onSuccess }: PointFormProps) {
 
       {error ? <p className="text-xs text-rose-700">{error}</p> : null}
 
+      <p className="text-xs leading-5 text-stone-600">
+        등록 직후에는 <strong className="text-[var(--pending)]">확인 중</strong>으로 공개됩니다.
+        다른 사용자의 검증 기준을 통과하면 확정 정보가 됩니다.
+      </p>
+
       <button
         type="submit"
         disabled={!canSubmit}
-        className="w-full rounded-xl border border-emerald-900 bg-emerald-900 px-3 py-2 text-sm font-semibold text-emerald-50 transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:border-stone-300 disabled:bg-stone-300"
+        className="w-full border border-[var(--trust)] bg-[var(--trust)] px-3 py-2.5 text-sm font-semibold text-white transition hover:bg-[var(--trust-strong)] disabled:border-stone-300 disabled:bg-stone-300"
       >
         {isPending ? "등록 중..." : "제보 등록하기"}
       </button>

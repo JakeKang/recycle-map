@@ -76,14 +76,14 @@ export default function LoginClient({ callbackUrl }: { callbackUrl: string }) {
 
   if (data?.user) {
     return (
-      <main className="mx-auto min-h-screen max-w-xl bg-[radial-gradient(circle_at_10%_10%,rgba(16,185,129,0.14),transparent_45%),linear-gradient(180deg,#f7fcf6_0%,#eef7f2_100%)] p-6">
-        <div className="rounded-3xl border border-emerald-900/15 bg-white/85 p-6 shadow-[0_14px_28px_rgba(8,45,24,0.08)]">
-          <h1 className="text-xl font-bold text-stone-900">이미 로그인되어 있습니다.</h1>
+      <main className="mx-auto min-h-screen max-w-2xl bg-[var(--paper)] px-5 py-12 md:py-20">
+        <div className="border-y border-stone-300 py-8">
+          <h1 className="font-ledger text-2xl font-bold text-[var(--ink)]">이미 로그인되어 있습니다.</h1>
           <p className="mt-2 text-sm text-stone-600">{data.user.name ?? "사용자"}</p>
           <button
             type="button"
             onClick={() => router.push(callbackUrl)}
-            className="mt-4 rounded-xl bg-emerald-800 px-3 py-2 text-sm font-semibold text-emerald-50"
+            className="mt-4 border border-[var(--trust)] bg-[var(--trust)] px-3 py-2 text-sm font-semibold text-white"
           >
             서비스로 이동
           </button>
@@ -93,13 +93,17 @@ export default function LoginClient({ callbackUrl }: { callbackUrl: string }) {
   }
 
   return (
-    <main className="mx-auto min-h-screen max-w-xl space-y-4 bg-[radial-gradient(circle_at_10%_10%,rgba(16,185,129,0.14),transparent_45%),linear-gradient(180deg,#f7fcf6_0%,#eef7f2_100%)] p-6">
-      <section className="rounded-3xl border border-emerald-900/15 bg-white/85 p-6 shadow-[0_14px_28px_rgba(8,45,24,0.08)]">
-        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-900/60">RecycleMap Access</p>
-        <h1 className="mt-1 text-xl font-bold text-stone-900">테스트 계정 로그인</h1>
+    <main className="mx-auto min-h-screen max-w-2xl bg-[var(--paper)] px-5 py-10 md:py-16">
+      <header className="mb-8">
+        <h1 className="font-ledger text-3xl font-bold tracking-[-0.03em] text-[var(--ink)]">RecycleMap 로그인</h1>
         <p className="mt-1 text-sm text-stone-600">
-          OAuth 연결 전에도 탐색/제보/리뷰 흐름을 바로 검증할 수 있습니다.
+          위치를 제보하고 검증에 참여하려면 계정이 필요합니다.
         </p>
+      </header>
+
+      <section className="border-y border-stone-300 py-6">
+        <h2 className="font-ledger text-xl font-bold text-[var(--ink)]">테스트 계정</h2>
+        <p className="mt-1 text-sm text-stone-600">역할별 제보·검증·신고 흐름을 확인합니다.</p>
 
         <form className="mt-4 space-y-3" onSubmit={handleTestAccountLogin}>
           <p className="block text-xs font-semibold text-stone-700">계정 선택</p>
@@ -109,10 +113,10 @@ export default function LoginClient({ callbackUrl }: { callbackUrl: string }) {
                 key={account.id}
                 type="button"
                 onClick={() => setAccountId(account.id)}
-                className={`rounded-xl border px-3 py-2 text-xs font-medium transition ${
+                className={`border px-3 py-2 text-xs font-medium transition ${
                   accountId === account.id
-                    ? "border-emerald-800 bg-emerald-800 text-emerald-50"
-                    : "border-emerald-900/20 text-stone-700 hover:bg-emerald-50"
+                    ? "border-[var(--trust)] bg-[var(--trust)] text-white"
+                    : "border-stone-300 text-stone-700 hover:border-stone-500"
                 }`}
               >
                 {account.name}
@@ -127,7 +131,7 @@ export default function LoginClient({ callbackUrl }: { callbackUrl: string }) {
             value={passcode}
             onChange={(event) => setPasscode(event.target.value)}
             placeholder="테스트 계정 패스코드"
-            className="w-full rounded-xl border border-emerald-900/20 px-3 py-2 text-sm"
+            className="w-full border border-stone-300 bg-[var(--paper-raised)] px-3 py-2 text-sm"
             required
           />
 
@@ -136,15 +140,15 @@ export default function LoginClient({ callbackUrl }: { callbackUrl: string }) {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full rounded-xl bg-emerald-800 px-3 py-2 text-sm font-semibold text-emerald-50 disabled:opacity-70"
+            className="w-full border border-[var(--trust)] bg-[var(--trust)] px-3 py-2 text-sm font-semibold text-white disabled:opacity-70"
           >
             {isLoading ? "로그인 중..." : "테스트 계정으로 로그인"}
           </button>
         </form>
       </section>
 
-      <section className="rounded-3xl border border-emerald-900/15 bg-white/85 p-6 shadow-[0_14px_28px_rgba(8,45,24,0.08)]">
-        <h2 className="text-base font-semibold text-stone-900">개발 전용 닉네임 로그인</h2>
+      <section className="border-b border-stone-300 py-6">
+        <h2 className="font-ledger text-lg font-bold text-[var(--ink)]">개발 전용 닉네임 로그인</h2>
         <p className="mt-1 text-xs text-stone-500">
           production 환경에서는 비활성화됩니다.
         </p>
@@ -152,13 +156,13 @@ export default function LoginClient({ callbackUrl }: { callbackUrl: string }) {
           <input
             value={nickname}
             onChange={(event) => setNickname(event.target.value)}
-            className="w-full rounded-xl border border-emerald-900/20 px-3 py-2 text-sm"
+            className="w-full border border-stone-300 bg-[var(--paper-raised)] px-3 py-2 text-sm"
             placeholder="닉네임"
           />
           <button
             type="button"
             onClick={handleDevNicknameLogin}
-            className="w-full rounded-xl border border-emerald-900/20 px-3 py-2 text-sm text-stone-700 transition hover:bg-emerald-50"
+            className="w-full border border-stone-300 px-3 py-2 text-sm font-semibold text-stone-700 transition hover:border-stone-500"
           >
             닉네임으로 로그인
           </button>

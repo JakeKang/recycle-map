@@ -4,8 +4,8 @@ import AuthStatus from "@/components/common/AuthStatus";
 import {
   categoryLabel,
   getCategoryChipStyle,
-  getCategoryVisual,
 } from "@/lib/point-visuals";
+import { verificationStatusLabel } from "@/lib/point-verification";
 import { PublicPoint as CollectionPoint } from "@/lib/public-mappers";
 import { CATEGORIES, PointCategory } from "@/types/point";
 import { ListFilter, LocateFixed, Search } from "lucide-react";
@@ -48,16 +48,11 @@ export default function SidebarPanelContent({
   onPointSelect,
 }: SidebarPanelContentProps) {
   return (
-    <div className="flex h-full flex-col border-b border-emerald-900/10 bg-[linear-gradient(180deg,#ffffff_0%,#f8fbf9_100%)] md:border-b-0 md:border-r">
-      <div className="border-b border-emerald-900/10 px-4 pb-4 pt-5">
-        <div className="mb-3 flex items-center gap-2">
-          <span className="grid h-10 w-10 place-items-center rounded-xl bg-emerald-900 text-lg text-emerald-50">
-            ♻
-          </span>
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-emerald-700">RecycleMap</p>
-            <h1 className="text-base font-bold tracking-tight text-emerald-900">우리동네 자원순환 알리미</h1>
-          </div>
+    <div className="flex h-full flex-col border-b border-stone-300 bg-[var(--paper-raised)] md:border-b-0 md:border-r">
+      <div className="border-b border-stone-300 px-4 pb-4 pt-5">
+        <div className="mb-4">
+          <h1 className="font-ledger text-2xl font-bold tracking-[-0.03em] text-[var(--ink)]">RecycleMap</h1>
+          <p className="mt-0.5 text-xs font-medium text-stone-600">우리동네 자원순환 알리미</p>
         </div>
 
         <AuthStatus />
@@ -68,7 +63,7 @@ export default function SidebarPanelContent({
             className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-stone-400"
           />
           <input
-            className="w-full rounded-xl border border-emerald-900/15 bg-white py-2 pl-9 pr-3 text-sm text-stone-800 outline-none ring-emerald-700/30 placeholder:text-stone-400 focus:ring"
+            className="w-full border border-stone-300 bg-white py-2.5 pl-9 pr-3 text-sm text-stone-800 outline-none placeholder:text-stone-400"
             placeholder="주소 또는 장소명으로 검색"
             value={query}
             onChange={(event) => onQueryChange(event.target.value)}
@@ -81,8 +76,8 @@ export default function SidebarPanelContent({
             onClick={() => onSelectCategory("all")}
             className={`rounded-full px-2.5 py-1 text-[11px] font-semibold transition ${
               selectedCategory === "all"
-                ? "bg-emerald-900 text-emerald-50"
-                : "border border-emerald-900/15 bg-white text-stone-600"
+                ? "bg-[var(--trust)] text-white"
+                : "border border-stone-300 bg-transparent text-stone-600"
             }`}
           >
             전체
@@ -111,14 +106,14 @@ export default function SidebarPanelContent({
             <button
               type="button"
               onClick={onOpenMyReports}
-              className="rounded-lg border border-emerald-900/15 bg-white px-2 py-1 font-semibold text-emerald-900"
+              className="border border-stone-300 bg-transparent px-2 py-1.5 font-semibold text-[var(--trust)]"
             >
               내 제보
             </button>
             <button
               type="button"
               onClick={onLocate}
-              className="inline-flex items-center gap-1 rounded-lg border border-emerald-900 bg-emerald-900 px-2 py-1 font-semibold text-emerald-50"
+              className="inline-flex items-center gap-1 border border-[var(--trust)] bg-[var(--trust)] px-2 py-1.5 font-semibold text-white"
             >
               <LocateFixed size={12} /> {isLocating ? "위치 확인 중" : "내 위치"}
             </button>
@@ -126,10 +121,11 @@ export default function SidebarPanelContent({
         </div>
       </div>
 
-      <div className="flex items-center px-4 py-3">
+      <div className="flex items-center justify-between border-b border-stone-300 px-4 py-3">
         <span className="inline-flex items-center gap-1 text-xs font-semibold text-stone-700">
           <ListFilter size={13} /> 수거함 목록
         </span>
+        <span className="text-[11px] tabular-nums text-stone-500">{listTotalCount}곳</span>
       </div>
 
       {listTotalCount > listPoints.length ? (
@@ -138,33 +134,39 @@ export default function SidebarPanelContent({
         </p>
       ) : null}
 
-      <div className="flex-1 space-y-1 overflow-y-auto px-3 pb-3">
+      <div className="flex-1 overflow-y-auto">
         {listTotalCount === 0 ? (
-          <p className="rounded-xl border border-dashed border-emerald-900/20 bg-emerald-50/50 p-3 text-sm text-stone-600">
-            현재 조건에 맞는 수거함이 없습니다.
+          <p className="m-4 border border-dashed border-stone-400 p-4 text-sm leading-6 text-stone-600">
+            현재 조건에 맞는 수거함이 없습니다. 검색어를 줄이거나 다른 카테고리를 선택해 주세요.
           </p>
         ) : (
           listPoints.map((point) => {
-            const visual = getCategoryVisual(point.category);
             return (
               <button
                 key={point.id}
                 data-testid="panel-point-item"
                 type="button"
                 onClick={() => onPointSelect(point.id)}
-                className={`w-full rounded-2xl border px-3 py-3 text-left transition ${
+                className={`w-full border-b border-stone-300 px-4 py-3 text-left transition ${
                   selectedPointId === point.id
-                    ? "border-emerald-900 bg-emerald-50"
-                    : "border-transparent bg-white hover:border-emerald-900/20"
+                    ? "bg-[var(--trust-soft)]"
+                    : "bg-transparent hover:bg-[var(--paper-hover)]"
                 }`}
               >
-                <p className="text-[11px] font-semibold" style={{ color: visual.textColor }}>
-                  {categoryLabel(point.category)}
-                </p>
-                <p className="mt-0.5 line-clamp-1 text-sm font-semibold text-stone-900">{point.title}</p>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[11px] font-semibold text-stone-600">
+                    {categoryLabel(point.category)}
+                  </p>
+                  <span
+                    className={`verification-state verification-state--${point.verificationStatus} !px-1.5 !py-0.5 !text-[10px]`}
+                  >
+                    {verificationStatusLabel(point.verificationStatus)}
+                  </span>
+                </div>
+                <p className="mt-1 line-clamp-1 text-sm font-semibold text-stone-900">{point.title}</p>
                 <p className="mt-0.5 line-clamp-1 text-xs text-stone-500">{point.address ?? "주소 미입력"}</p>
-                <p className="mt-1 text-[11px] text-stone-500">
-                  평점 {point.avgRating} · 리뷰 {point.reviewCount}
+                <p className="mt-1 text-[11px] tabular-nums text-stone-500">
+                  정확 {point.accurateVoteCount} · 잘못 {point.inaccurateVoteCount} · 리뷰 {point.reviewCount}
                 </p>
               </button>
             );

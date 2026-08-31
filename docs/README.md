@@ -1,0 +1,25 @@
+# RecycleMap 문서
+
+RecycleMap v1.0의 사용자·운영·개발 문서 모음입니다. 화면 이름은 실제 UI 문구와 일치하도록 유지하며, 기능이나 정책을 바꿀 때 관련 캡처와 [커버리지 매트릭스](./manual/coverage-matrix.md)도 함께 갱신합니다.
+
+## 문서 안내
+
+- [시스템 구조](./architecture.md): 런타임 구성, 데이터 흐름, 인증과 저장소 경계
+- [사용자 매뉴얼](./manual/01-system-and-roles.md): 역할별 사용법과 화면별 절차
+- [QA 및 장애 복구](./manual/09-qa-and-recovery.md): 릴리스 전 점검과 오류 대응
+- [커버리지 매트릭스](./manual/coverage-matrix.md): 문서화한 화면·상태·예외 목록
+
+## 캡처 규칙
+
+- 캡처는 Playwright로 실제 로컬 UI를 실행해 생성합니다.
+- 빨간 외곽선과 번호는 설명할 조작 영역을 가리키는 주석이며 제품 UI가 아닙니다.
+- API 오류 예시는 요청을 실제 실패 응답으로 가로채 재현하며, 이미지를 사후 편집해 오류를 만들지 않습니다.
+- 브라우저 위치 권한창, Daum 우편번호 팝업, OAuth 제공자 화면처럼 외부 플랫폼이 소유한 UI는 캡처하지 않고 문서상 제한으로 표시합니다.
+
+## 갱신 체크리스트
+
+1. 변경된 화면과 성공·실패 경로를 직접 실행합니다.
+2. 기존 캡처가 현재 UI와 일치하는지 확인하고 필요한 이미지만 다시 만듭니다.
+3. 매뉴얼의 경로, 버튼 이름, 저장 결과, 복구 절차를 수정합니다.
+4. 커버리지 매트릭스의 모든 행을 `covered`, `documented-limitation`, `out-of-scope` 중 하나로 유지합니다.
+5. `node /Users/yjkang/.agents/skills/create-product-manual/scripts/audit-manual.mjs docs/manual`로 문서 감사를 실행합니다.

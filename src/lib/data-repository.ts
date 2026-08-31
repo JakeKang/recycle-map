@@ -1,7 +1,12 @@
 import { store } from "@/lib/data-store";
 import { haversineMeters } from "@/lib/distance";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { CollectionPoint, PointQuery } from "@/types/point";
+import {
+  CollectionPoint,
+  PointQuery,
+  VerificationVote,
+  VerificationVoteValue,
+} from "@/types/point";
 import { Report } from "@/types/report";
 import { Review } from "@/types/review";
 import { PointSuggestion } from "@/types/suggestion";
@@ -21,8 +26,21 @@ type DbPointRow = {
   avg_rating: number | string | null;
   review_count: number | null;
   report_count: number | null;
+  verification_status: CollectionPoint["verificationStatus"] | null;
+  accurate_vote_count: number | null;
+  inaccurate_vote_count: number | null;
+  verification_override: CollectionPoint["verificationOverride"] | null;
   verified_at: string | null;
   photo_ids?: string[] | null;
+  created_at: string;
+  updated_at: string;
+};
+
+type DbVerificationVoteRow = {
+  id: string;
+  point_id: string;
+  user_id: string;
+  value: VerificationVoteValue;
   created_at: string;
   updated_at: string;
 };
@@ -69,8 +87,26 @@ function toPoint(row: DbPointRow): CollectionPoint {
     avgRating: Number(row.avg_rating ?? 0),
     reviewCount: row.review_count ?? 0,
     reportCount: row.report_count ?? 0,
+    verificationStatus:
+      row.verification_override ??
+      row.verification_status ??
+      (row.verified_at ? "verified" : "pending"),
+    accurateVoteCount: row.accurate_vote_count ?? 0,
+    inaccurateVoteCount: row.inaccurate_vote_count ?? 0,
+    verificationOverride: row.verification_override ?? null,
     verifiedAt: row.verified_at,
     photoIds: row.photo_ids ?? [],
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+function toVerificationVote(row: DbVerificationVoteRow): VerificationVote {
+  return {
+    id: row.id,
+    pointId: row.point_id,
+    userId: row.user_id,
+    value: row.value,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -264,6 +300,10 @@ export const repository = {
             avg_rating: input.avgRating,
             review_count: input.reviewCount,
             report_count: input.reportCount,
+            verification_status: input.verificationStatus,
+            accurate_vote_count: input.accurateVoteCount,
+            inaccurate_vote_count: input.inaccurateVoteCount,
+            verification_override: input.verificationOverride,
             verified_at: input.verifiedAt,
             photo_ids: input.photoIds ?? [],
           })
@@ -299,6 +339,18 @@ export const repository = {
         if (patch.lng !== undefined) payload.lng = patch.lng;
         if (patch.address !== undefined) payload.address = patch.address;
         if (patch.status !== undefined) payload.status = patch.status;
+        if (patch.verificationStatus !== undefined) {
+          payload.verification_status = patch.verificationStatus;
+        }
+        if (patch.accurateVoteCount !== undefined) {
+          payload.accurate_vote_count = patch.accurateVoteCount;
+        }
+        if (patch.inaccurateVoteCount !== undefined) {
+          payload.inaccurate_vote_count = patch.inaccurateVoteCount;
+        }
+        if (patch.verificationOverride !== undefined) {
+          payload.verification_override = patch.verificationOverride;
+        }
         if (patch.verifiedAt !== undefined) payload.verified_at = patch.verifiedAt;
 
         const { data, error } = await client
@@ -354,6 +406,106 @@ export const repository = {
         );
       },
       () => store.hasDuplicateNearby(lat, lng, category, meters),
+    );
+  },
+
+  async getVerificationVote(
+    pointId: string,
+    userId: string,
+  ): Promise<VerificationVote | null> {
+    return withFallback(
+      async () => {
+        const client = createSupabaseServerClient();
+        if (!client) {
+          return store.getVerificationVote(pointId, userId);
+        }
+
+        const { data, error } = await client
+          .from("point_verification_votes")
+          .select("*")
+          .eq("point_id", pointId)
+          .eq("user_id", userId)
+          .maybeSingle();
+
+        if (error) {
+          throw error;
+        }
+
+        return data ? toVerificationVote(data as DbVerificationVoteRow) : null;
+      },
+      () => store.getVerificationVote(pointId, userId),
+    );
+  },
+
+  async castVerificationVote(
+    pointId: string,
+    userId: string,
+    value: VerificationVoteValue,
+  ): Promise<{ point: CollectionPoint; vote: VerificationVote } | null> {
+    return withFallback(
+      async () => {
+        const client = createSupabaseServerClient();
+        if (!client) {
+          return store.castVerificationVote(pointId, userId, value);
+        }
+
+        const { data, error } = await client
+          .from("point_verification_votes")
+          .upsert(
+            { point_id: pointId, user_id: userId, value },
+            { onConflict: "point_id,user_id" },
+          )
+          .select("*")
+          .single();
+
+        if (error) {
+          throw error;
+        }
+
+        const point = await repository.getPoint(pointId);
+        return point
+          ? { point, vote: toVerificationVote(data as DbVerificationVoteRow) }
+          : null;
+      },
+      () => store.castVerificationVote(pointId, userId, value),
+    );
+  },
+
+  async resetPointVerification(id: string): Promise<CollectionPoint | null> {
+    return withFallback(
+      async () => {
+        const client = createSupabaseServerClient();
+        if (!client) {
+          return store.resetPointVerification(id);
+        }
+
+        const { error: deleteError } = await client
+          .from("point_verification_votes")
+          .delete()
+          .eq("point_id", id);
+        if (deleteError) {
+          throw deleteError;
+        }
+
+        const { data, error } = await client
+          .from("collection_points")
+          .update({
+            verification_status: "pending",
+            accurate_vote_count: 0,
+            inaccurate_vote_count: 0,
+            verification_override: null,
+            verified_at: null,
+          })
+          .eq("id", id)
+          .select("*")
+          .maybeSingle();
+        if (error) {
+          throw error;
+        }
+
+        return data ? toPoint(data as DbPointRow) : null;
+      },
+      () => store.resetPointVerification(id),
     );
   },
 

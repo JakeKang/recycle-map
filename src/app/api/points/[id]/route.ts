@@ -9,7 +9,7 @@ import { pointPatchSchema } from "@/lib/validators";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   context: { params: Promise<{ id: string }> },
 ) {
   const { id } = await context.params;
@@ -18,8 +18,22 @@ export async function GET(
     return NextResponse.json({ message: "포인트를 찾을 수 없습니다." }, { status: 404 });
   }
 
-  const reviews = await repository.listReviews(id);
-  return NextResponse.json({ ...toPublicPoint(point), reviews: toPublicReviews(reviews) });
+  const userId = await resolveRequestUserId(request);
+  const [reviews, currentVote] = await Promise.all([
+    repository.listReviews(id),
+    userId ? repository.getVerificationVote(id, userId) : Promise.resolve(null),
+  ]);
+  return NextResponse.json({
+    ...toPublicPoint(point),
+    reviews: toPublicReviews(reviews),
+    currentUserVote: currentVote?.value ?? null,
+    canVote: Boolean(userId && userId !== point.userId),
+    voteEligibility: !userId
+      ? "login_required"
+      : userId === point.userId
+        ? "owner"
+        : "eligible",
+  });
 }
 
 export async function PATCH(
@@ -85,5 +99,6 @@ export async function PATCH(
     return NextResponse.json({ message: "포인트를 찾을 수 없습니다." }, { status: 404 });
   }
 
-  return NextResponse.json(updated);
+  const resetPoint = await repository.resetPointVerification(id);
+  return NextResponse.json(toPublicPoint(resetPoint ?? updated));
 }

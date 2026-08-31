@@ -22,6 +22,11 @@ const deletePoliciesFilePath = path.resolve(
   "supabase/migrations/20260309170000_delete_policies.sql",
 );
 
+const verificationVotesFilePath = path.resolve(
+  process.cwd(),
+  "supabase/migrations/20260831090000_point_verification_votes.sql",
+);
+
 describe("supabase schema contract", () => {
   it("contains core tables and triggers for points/reviews/reports", async () => {
     const sql = await readFile(schemaFilePath, "utf-8");
@@ -56,5 +61,15 @@ describe("supabase schema contract", () => {
     expect(sql).toContain("create policy reviews_delete_test_accounts");
     expect(sql).toContain("create policy reports_delete_test_accounts");
     expect(sql).toContain("create policy photos_delete_test_accounts");
+  });
+
+  it("contains community verification vote schema, thresholds, trigger, and rls", async () => {
+    const sql = await readFile(verificationVotesFilePath, "utf-8");
+
+    expect(sql).toContain("create table if not exists public.point_verification_votes");
+    expect(sql).toContain("inaccurate_count >= 3");
+    expect(sql).toContain("accurate_count >= 5");
+    expect(sql).toContain("trigger_sync_point_verification_state");
+    expect(sql).toContain("verification_votes_insert_own");
   });
 });

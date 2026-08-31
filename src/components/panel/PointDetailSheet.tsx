@@ -2,15 +2,21 @@
 
 import ActionDialog from "@/components/common/ActionDialog";
 import NavigationLinks from "@/components/point/NavigationLinks";
+import VerificationPanel from "@/components/point/VerificationPanel";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { useSuggestions } from "@/hooks/usePoints";
 import { extractErrorMessage } from "@/lib/api-error";
-import { buildClientJsonHeaders } from "@/lib/client-dev-user";
+import { buildClientHeaders, buildClientJsonHeaders } from "@/lib/client-dev-user";
 import { categoryLabel, getCategoryVisual } from "@/lib/point-visuals";
-import { PointCategory, PublicPointDetail } from "@/types/point";
+import {
+  PointCategory,
+  PublicPointDetail,
+  VerificationVoteValue,
+} from "@/types/point";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, Flag, MessageCircle, PenSquare } from "lucide-react";
+import { Flag, MessageCircle, PenSquare } from "lucide-react";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 import { useEffect, useRef, useState } from "react";
 
 interface PointDetailSheetProps {
@@ -46,6 +52,8 @@ export default function PointDetailSheet({
   const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
   const [isSuggestionDialogOpen, setIsSuggestionDialogOpen] = useState(false);
   const dragStartYRef = useRef<number | null>(null);
+  const { data: session } = useSession();
+  const isAdmin = session?.user?.isAdmin ?? false;
 
   const {
     data: suggestions = [],
@@ -53,11 +61,13 @@ export default function PointDetailSheet({
     error: suggestionsError,
   } = useSuggestions(pointId);
 
-  const { data, isLoading, error } = useQuery<PublicPointDetail>({
+  const { data, isLoading, error, refetch } = useQuery<PublicPointDetail>({
     queryKey: ["point", pointId],
     enabled: Boolean(pointId),
     queryFn: async () => {
-      const response = await fetch(`/api/points/${pointId}`);
+      const response = await fetch(`/api/points/${pointId}`, {
+        headers: buildClientHeaders(),
+      });
       if (!response.ok) {
         let payload: unknown = null;
         try {
@@ -103,15 +113,16 @@ export default function PointDetailSheet({
     },
   });
 
-  const confirmMutation = useMutation({
-    mutationFn: async () => {
+  const voteMutation = useMutation({
+    mutationFn: async (value: VerificationVoteValue) => {
       if (!pointId) {
         throw new Error("포인트 정보가 없습니다.");
       }
 
-      const response = await fetch(`/api/points/${pointId}/confirm`, {
+      const response = await fetch(`/api/points/${pointId}/votes`, {
         method: "POST",
         headers: buildClientJsonHeaders(),
+        body: JSON.stringify({ value }),
       });
 
       if (!response.ok) {
@@ -121,11 +132,39 @@ export default function PointDetailSheet({
         } catch {
           payload = null;
         }
-        throw new Error(extractErrorMessage(payload, "현장 확인 처리에 실패했습니다."));
+        throw new Error(extractErrorMessage(payload, "검증 투표를 반영하지 못했습니다."));
       }
     },
     onSuccess: async () => {
-      setSuccessNotice("현장에서 확인된 위치로 반영했어요.");
+      setSuccessNotice("검증 의견을 반영했습니다.");
+      await queryClient.invalidateQueries({ queryKey: ["point", pointId] });
+      await queryClient.invalidateQueries({ queryKey: ["points"] });
+      await queryClient.invalidateQueries({ queryKey: ["points", "mine"] });
+    },
+  });
+
+  const adminVerificationMutation = useMutation({
+    mutationFn: async (status: PublicPointDetail["verificationStatus"]) => {
+      if (!pointId) {
+        throw new Error("포인트 정보가 없습니다.");
+      }
+      const response = await fetch(`/api/points/${pointId}/confirm`, {
+        method: "POST",
+        headers: buildClientJsonHeaders(),
+        body: JSON.stringify({ status }),
+      });
+      if (!response.ok) {
+        let payload: unknown = null;
+        try {
+          payload = await response.json();
+        } catch {
+          payload = null;
+        }
+        throw new Error(extractErrorMessage(payload, "검증 상태를 조정하지 못했습니다."));
+      }
+    },
+    onSuccess: async () => {
+      setSuccessNotice("관리자 검증 상태를 반영했습니다.");
       await queryClient.invalidateQueries({ queryKey: ["point", pointId] });
       await queryClient.invalidateQueries({ queryKey: ["points"] });
     },
@@ -255,7 +294,11 @@ export default function PointDetailSheet({
   }, [dragOffset, isDragging, isMobile, mobileSnap, onClose, onMobileSnapChange]);
 
   const mobileSnapClass =
-    mobileSnap === "peek" ? "h-[44vh]" : mobileSnap === "mid" ? "h-[72vh]" : "h-[92vh]";
+    mobileSnap === "peek"
+      ? "h-[var(--sheet-peek-height)]"
+      : mobileSnap === "mid"
+        ? "h-[var(--sheet-mid-height)]"
+        : "h-[var(--sheet-full-height)]";
 
   if (!pointId) {
     return null;
@@ -264,13 +307,13 @@ export default function PointDetailSheet({
   return (
     <>
       <aside
-        className={`fixed bottom-0 right-0 z-[1100] w-full overflow-y-auto rounded-t-3xl border border-emerald-900/15 bg-[linear-gradient(180deg,#f9fcf8_0%,#eef7f2_100%)] p-4 shadow-[0_-14px_30px_rgba(15,23,42,0.2)] ${mobileSnapClass} md:top-0 md:h-screen md:max-w-[420px] md:rounded-none md:rounded-l-3xl md:border-l md:border-t-0`}
+        className={`elevation-sheet fixed bottom-0 right-0 z-[1100] w-full overflow-y-auto rounded-t-[var(--radius-sheet)] border-t border-stone-300 bg-[var(--paper-raised)] p-4 pb-24 ${mobileSnapClass} md:top-0 md:h-screen md:max-w-[var(--layout-detail-rail)] md:rounded-none md:border-l md:border-t-0 md:pb-4`}
         aria-label="포인트 상세 시트"
         style={
           isMobile
             ? {
                 transform: `translateY(${dragOffset > 0 ? dragOffset : dragOffset * 0.35}px)`,
-                transition: isDragging ? "none" : "transform 180ms ease, height 180ms ease",
+                transition: isDragging ? "none" : "transform 180ms cubic-bezier(0.16, 1, 0.3, 1)",
               }
             : undefined
         }
@@ -285,14 +328,14 @@ export default function PointDetailSheet({
               setIsDragging(true);
               setDragOffset(0);
             }}
-            className="mx-auto h-1.5 w-12 rounded-full bg-stone-300"
+            className="mx-auto h-1.5 w-12 rounded-full bg-stone-400"
           />
           <div className="flex items-center justify-center gap-1">
             <button
               type="button"
               onClick={() => onMobileSnapChange("peek")}
-              className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                mobileSnap === "peek" ? "bg-emerald-900 text-emerald-50" : "bg-white text-stone-600"
+              className={`border px-2.5 py-1 text-[11px] font-semibold ${
+                mobileSnap === "peek" ? "border-[var(--trust)] bg-[var(--trust)] text-white" : "border-stone-300 bg-transparent text-stone-600"
               }`}
             >
               요약
@@ -300,8 +343,8 @@ export default function PointDetailSheet({
             <button
               type="button"
               onClick={() => onMobileSnapChange("mid")}
-              className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                mobileSnap === "mid" ? "bg-emerald-900 text-emerald-50" : "bg-white text-stone-600"
+              className={`border px-2.5 py-1 text-[11px] font-semibold ${
+                mobileSnap === "mid" ? "border-[var(--trust)] bg-[var(--trust)] text-white" : "border-stone-300 bg-transparent text-stone-600"
               }`}
             >
               중간
@@ -309,8 +352,8 @@ export default function PointDetailSheet({
             <button
               type="button"
               onClick={() => onMobileSnapChange("full")}
-              className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                mobileSnap === "full" ? "bg-emerald-900 text-emerald-50" : "bg-white text-stone-600"
+              className={`border px-2.5 py-1 text-[11px] font-semibold ${
+                mobileSnap === "full" ? "border-[var(--trust)] bg-[var(--trust)] text-white" : "border-stone-300 bg-transparent text-stone-600"
               }`}
             >
               전체
@@ -320,7 +363,7 @@ export default function PointDetailSheet({
 
         <div className="mb-3 flex items-center justify-between gap-2">
           <div>
-            <h2 className="text-base font-semibold text-stone-900">포인트 상세</h2>
+            <h2 className="font-ledger text-lg font-bold text-[var(--ink)]">위치 정보</h2>
             <p className="hidden text-[11px] text-stone-500 md:block">
               스냅 단축키: <kbd className="rounded border border-stone-300 bg-white px-1">[</kbd> /
               <kbd className="rounded border border-stone-300 bg-white px-1">]</kbd>
@@ -329,7 +372,7 @@ export default function PointDetailSheet({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg border border-stone-300 bg-white px-2 py-1 text-xs text-stone-700"
+            className="border border-stone-300 bg-transparent px-2.5 py-1.5 text-xs font-semibold text-stone-700"
           >
             닫기
           </button>
@@ -338,9 +381,16 @@ export default function PointDetailSheet({
         {isLoading ? <p className="text-sm text-stone-600">상세 정보를 불러오는 중...</p> : null}
 
         {error ? (
-          <p className="rounded-lg border border-rose-200 bg-rose-50 p-2 text-sm text-rose-700">
-            {error instanceof Error ? error.message : "상세 정보를 불러오지 못했습니다."}
-          </p>
+          <div className="border-y border-[var(--danger)]/40 py-3 text-sm text-[var(--danger)]">
+            <p>{error instanceof Error ? error.message : "상세 정보를 불러오지 못했습니다."}</p>
+            <button
+              type="button"
+              onClick={() => refetch()}
+              className="mt-2 border border-[var(--danger)] px-2.5 py-1.5 text-xs font-semibold"
+            >
+              다시 불러오기
+            </button>
+          </div>
         ) : null}
 
         {successNotice ? (
@@ -351,10 +401,10 @@ export default function PointDetailSheet({
 
         {data ? (
           <div className="space-y-3 pb-6">
-            <section className="rounded-2xl border border-emerald-900/10 bg-white/90 p-3">
+            <section className="border-b border-stone-300 pb-4">
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <h3 className="text-lg font-semibold text-stone-900">{data.title}</h3>
+                  <h3 className="font-ledger text-xl font-bold tracking-[-0.02em] text-[var(--ink)]">{data.title}</h3>
                   <p className="text-xs text-stone-500">{data.address ?? "주소 미입력"}</p>
                 </div>
                 <span
@@ -382,7 +432,7 @@ export default function PointDetailSheet({
                       href={`/api/upload/${photoId}/download`}
                       target="_blank"
                       rel="noreferrer"
-                      className="block overflow-hidden rounded-lg border border-emerald-900/10 bg-stone-50"
+                      className="block overflow-hidden border border-stone-300 bg-stone-50"
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
@@ -405,36 +455,62 @@ export default function PointDetailSheet({
 
               <div className="mt-3 flex flex-wrap gap-2">
                 <NavigationLinks lat={data.lat} lng={data.lng} name={data.title} />
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSuccessNotice(null);
-                    confirmMutation.mutate();
-                  }}
-                  className="inline-flex items-center gap-1 rounded-lg border border-emerald-900/20 bg-emerald-50 px-2.5 py-1.5 text-xs font-semibold text-emerald-900"
-                  disabled={confirmMutation.isPending}
-                >
-                  <CheckCircle2 size={14} />
-                  {confirmMutation.isPending ? "확인 중..." : "여기에 있어요"}
-                </button>
                 <Link
                   href={`/point/${data.id}`}
-                  className="inline-flex items-center rounded-lg border border-emerald-900/20 bg-white px-2.5 py-1.5 text-xs font-semibold text-emerald-900"
+                  className="inline-flex items-center border border-[var(--trust)] bg-transparent px-2.5 py-1.5 text-xs font-semibold text-[var(--trust)]"
                 >
                   전체 상세 보기
                 </Link>
               </div>
-              {confirmMutation.error ? (
-                <p className="mt-1 text-xs text-rose-700">
-                  {confirmMutation.error instanceof Error
-                    ? confirmMutation.error.message
-                    : "현장 확인 처리에 실패했습니다."}
-                </p>
-              ) : null}
             </section>
 
-            <section className="rounded-2xl border border-emerald-900/10 bg-white/90 p-3">
-              <p className="text-xs font-semibold text-stone-900">빠른 액션</p>
+            <VerificationPanel
+              point={data}
+              isVoting={voteMutation.isPending}
+              voteError={
+                voteMutation.error instanceof Error ? voteMutation.error.message : null
+              }
+              onVote={(value) => {
+                setSuccessNotice(null);
+                voteMutation.mutate(value);
+              }}
+            />
+
+            {isAdmin ? (
+              <section className="border-b border-stone-300 pb-4">
+                <h3 className="text-xs font-bold text-stone-900">관리자 검증 조정</h3>
+                <p className="mt-1 text-xs leading-5 text-stone-600">
+                  현장 확인이나 명백한 오정보에만 사용합니다. 조정 사실은 사용자에게 표시됩니다.
+                </p>
+                <div className="mt-2 grid grid-cols-3 gap-1.5">
+                  {(["pending", "verified", "inaccurate"] as const).map((status) => (
+                    <button
+                      key={status}
+                      type="button"
+                      disabled={adminVerificationMutation.isPending}
+                      onClick={() => adminVerificationMutation.mutate(status)}
+                      className="border border-stone-300 px-2 py-2 text-[11px] font-semibold text-stone-700 hover:border-stone-500"
+                    >
+                      {status === "pending"
+                        ? "확인 중"
+                        : status === "verified"
+                          ? "확정"
+                          : "정확하지 않음"}
+                    </button>
+                  ))}
+                </div>
+                {adminVerificationMutation.error ? (
+                  <p className="form-error">
+                    {adminVerificationMutation.error instanceof Error
+                      ? adminVerificationMutation.error.message
+                      : "검증 상태를 조정하지 못했습니다."}
+                  </p>
+                ) : null}
+              </section>
+            ) : null}
+
+            <section className="border-b border-stone-300 pb-4">
+              <p className="text-xs font-semibold text-stone-900">참여하기</p>
               <div className="mt-2 grid grid-cols-3 gap-2">
                 <button
                   type="button"
@@ -442,7 +518,7 @@ export default function PointDetailSheet({
                     setSuccessNotice(null);
                     setIsReviewDialogOpen(true);
                   }}
-                  className="inline-flex items-center justify-center gap-1 rounded-xl border border-emerald-900/20 bg-emerald-50 px-2 py-2 text-xs font-semibold text-emerald-900"
+                  className="inline-flex items-center justify-center gap-1 border border-stone-300 bg-transparent px-2 py-2 text-xs font-semibold text-[var(--trust)]"
                 >
                   <MessageCircle size={14} /> 리뷰 작성
                 </button>
@@ -452,7 +528,7 @@ export default function PointDetailSheet({
                     setSuccessNotice(null);
                     setIsReportDialogOpen(true);
                   }}
-                  className="inline-flex items-center justify-center gap-1 rounded-xl border border-rose-900/20 bg-rose-50 px-2 py-2 text-xs font-semibold text-rose-700"
+                  className="inline-flex items-center justify-center gap-1 border border-stone-300 bg-transparent px-2 py-2 text-xs font-semibold text-[var(--danger)]"
                 >
                   <Flag size={14} /> 문제 신고
                 </button>
@@ -462,15 +538,15 @@ export default function PointDetailSheet({
                     setSuccessNotice(null);
                     setIsSuggestionDialogOpen(true);
                   }}
-                  className="inline-flex items-center justify-center gap-1 rounded-xl border border-blue-900/20 bg-blue-50 px-2 py-2 text-xs font-semibold text-blue-700"
+                  className="inline-flex items-center justify-center gap-1 border border-stone-300 bg-transparent px-2 py-2 text-xs font-semibold text-stone-700"
                 >
                   <PenSquare size={14} /> 정보 수정
                 </button>
               </div>
             </section>
 
-            <section className="rounded-2xl border border-blue-900/10 bg-white/90 p-3">
-              <p className="text-[11px] font-semibold text-blue-900">최근 수정 제안</p>
+            <section className="pb-2">
+              <p className="text-xs font-semibold text-stone-900">최근 수정 제안</p>
               {isSuggestionsLoading ? (
                 <p className="text-xs text-stone-600">수정 제안 목록을 불러오는 중...</p>
               ) : null}
@@ -487,7 +563,7 @@ export default function PointDetailSheet({
               {!isSuggestionsLoading && !suggestionsError && suggestions.length > 0 ? (
                 <ul className="mt-1 space-y-1 text-xs text-stone-700">
                   {suggestions.slice(0, 3).map((item) => (
-                    <li key={item.id} className="rounded-lg border border-blue-900/10 bg-white px-2 py-1">
+                    <li key={item.id} className="border-t border-stone-300 px-1 py-2">
                       <p>
                         카테고리 {categoryLabel(item.payload.category)} · 상태 {item.status}
                       </p>

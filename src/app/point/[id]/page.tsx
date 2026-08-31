@@ -1,9 +1,10 @@
 "use client";
 
 import NavigationLinks from "@/components/point/NavigationLinks";
+import VerificationPanel from "@/components/point/VerificationPanel";
 import { extractErrorMessage } from "@/lib/api-error";
-import { buildClientJsonHeaders } from "@/lib/client-dev-user";
-import { PublicPointDetail } from "@/types/point";
+import { buildClientHeaders, buildClientJsonHeaders } from "@/lib/client-dev-user";
+import { PublicPointDetail, VerificationVoteValue } from "@/types/point";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -16,10 +17,12 @@ export default function PointDetailPage() {
   const [comment, setComment] = useState("");
   const [reportReason, setReportReason] = useState("");
 
-  const { data, isLoading, error } = useQuery<PublicPointDetail>({
+  const { data, isLoading, error, refetch } = useQuery<PublicPointDetail>({
     queryKey: ["point", params.id],
     queryFn: async () => {
-      const response = await fetch(`/api/points/${params.id}`);
+      const response = await fetch(`/api/points/${params.id}`, {
+        headers: buildClientHeaders(),
+      });
       if (!response.ok) {
         let payload: unknown = null;
         try {
@@ -86,6 +89,30 @@ export default function PointDetailPage() {
     },
   });
 
+  const voteMutation = useMutation({
+    mutationFn: async (value: VerificationVoteValue) => {
+      const response = await fetch(`/api/points/${params.id}/votes`, {
+        method: "POST",
+        headers: buildClientJsonHeaders(),
+        body: JSON.stringify({ value }),
+      });
+
+      if (!response.ok) {
+        let payload: unknown = null;
+        try {
+          payload = await response.json();
+        } catch {
+          payload = null;
+        }
+        throw new Error(extractErrorMessage(payload, "검증 투표를 반영하지 못했습니다."));
+      }
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["point", params.id] });
+      await queryClient.invalidateQueries({ queryKey: ["points"] });
+    },
+  });
+
   function submitReview(event: { preventDefault: () => void }) {
     event.preventDefault();
     reviewMutation.mutate();
@@ -101,20 +128,31 @@ export default function PointDetailPage() {
   }
 
   if (error || !data) {
-    return <main className="p-6 text-stone-700">포인트를 찾을 수 없습니다.</main>;
+    return (
+      <main className="mx-auto min-h-screen max-w-3xl bg-[var(--paper)] p-6 text-stone-700">
+        <h1 className="font-ledger text-xl font-bold text-[var(--ink)]">위치 정보를 불러오지 못했습니다.</h1>
+        <p className="mt-2 text-sm">네트워크 연결을 확인한 뒤 다시 시도해 주세요.</p>
+        <button
+          type="button"
+          onClick={() => refetch()}
+          className="mt-4 border border-[var(--danger)] px-3 py-2 text-sm font-semibold text-[var(--danger)]"
+        >
+          다시 불러오기
+        </button>
+      </main>
+    );
   }
 
   return (
-    <main className="mx-auto min-h-screen max-w-3xl space-y-4 bg-[radial-gradient(circle_at_10%_10%,rgba(16,185,129,0.12),transparent_45%),linear-gradient(180deg,#f7fcf6_0%,#f1f7f3_100%)] p-4 md:p-6">
-      <Link href="/" className="text-sm font-medium text-emerald-900/80">
+    <main className="mx-auto min-h-screen max-w-4xl bg-[var(--paper)] px-4 py-6 md:px-8 md:py-10">
+      <Link href="/" className="text-sm font-semibold text-[var(--trust)] underline decoration-[var(--trust)]/30 underline-offset-4">
         ← 지도 화면으로 돌아가기
       </Link>
 
-      <section className="rounded-3xl border border-emerald-900/12 bg-white/85 p-5 shadow-[0_14px_30px_rgba(10,45,28,0.08)]">
-        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-900/60">Point Detail</p>
-        <h1 className="mt-1 text-2xl font-bold tracking-tight text-stone-900">{data.title}</h1>
+      <section className="mt-8 border-y border-stone-300 py-6">
+        <h1 className="font-ledger text-3xl font-bold tracking-[-0.03em] text-[var(--ink)]">{data.title}</h1>
         <p className="mt-1 text-sm text-stone-600">{data.address ?? "주소 미입력"}</p>
-        <p className="mt-3 rounded-xl border border-emerald-900/10 bg-emerald-50/60 p-3 text-sm text-stone-700">
+        <p className="mt-5 max-w-[var(--measure-reading)] text-sm leading-7 text-stone-700">
           {data.description ?? "설명 없음"}
         </p>
         {data.photoIds && data.photoIds.length > 0 ? (
@@ -125,7 +163,7 @@ export default function PointDetailPage() {
                 href={`/api/upload/${photoId}/download`}
                 target="_blank"
                 rel="noreferrer"
-                className="block overflow-hidden rounded-xl border border-emerald-900/10 bg-stone-50"
+                className="block overflow-hidden border border-stone-300 bg-stone-50"
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
@@ -146,13 +184,20 @@ export default function PointDetailPage() {
         </div>
       </section>
 
-      <section className="rounded-3xl border border-emerald-900/12 bg-white/85 p-5 shadow-[0_14px_30px_rgba(10,45,28,0.08)]">
-        <h2 className="text-base font-semibold text-stone-900">리뷰 작성</h2>
+      <VerificationPanel
+        point={data}
+        isVoting={voteMutation.isPending}
+        voteError={voteMutation.error instanceof Error ? voteMutation.error.message : null}
+        onVote={(value) => voteMutation.mutate(value)}
+      />
+
+      <section className="border-b border-stone-300 py-6">
+        <h2 className="font-ledger text-xl font-bold text-[var(--ink)]">리뷰</h2>
         <form className="mt-3 space-y-2" onSubmit={submitReview}>
           <select
             value={rating}
             onChange={(event) => setRating(Number(event.target.value))}
-            className="rounded-xl border border-emerald-900/20 bg-white px-3 py-2 text-sm"
+            className="border border-stone-300 bg-[var(--paper-raised)] px-3 py-2 text-sm"
           >
             {[5, 4, 3, 2, 1].map((value) => (
               <option key={value} value={value}>
@@ -164,11 +209,11 @@ export default function PointDetailPage() {
             value={comment}
             onChange={(event) => setComment(event.target.value)}
             placeholder="리뷰 코멘트 (선택)"
-            className="h-20 w-full rounded-xl border border-emerald-900/20 bg-white px-3 py-2 text-sm"
+            className="h-20 w-full border border-stone-300 bg-[var(--paper-raised)] px-3 py-2 text-sm"
           />
           <button
             type="submit"
-            className="rounded-xl border border-emerald-900 bg-emerald-900 px-3 py-2 text-sm font-semibold text-emerald-50"
+            className="border border-[var(--trust)] bg-[var(--trust)] px-3 py-2 text-sm font-semibold text-white"
           >
             리뷰 등록
           </button>
@@ -183,7 +228,7 @@ export default function PointDetailPage() {
 
         <div className="mt-4 space-y-2">
           {data.reviews.map((review: { id: string; rating: number; comment: string | null }) => (
-            <div key={review.id} className="rounded-xl border border-emerald-900/10 bg-white p-3">
+            <div key={review.id} className="border-t border-stone-300 py-3">
               <p className="text-sm font-semibold">{review.rating}점</p>
               <p className="text-sm text-stone-700">{review.comment ?? "코멘트 없음"}</p>
             </div>
@@ -191,18 +236,18 @@ export default function PointDetailPage() {
         </div>
       </section>
 
-      <section className="rounded-3xl border border-rose-900/12 bg-white/85 p-5 shadow-[0_14px_30px_rgba(70,20,20,0.06)]">
-        <h2 className="text-base font-semibold text-stone-900">정보 신고</h2>
+      <section className="py-6">
+        <h2 className="font-ledger text-xl font-bold text-[var(--ink)]">정보 신고</h2>
         <form className="mt-3 space-y-2" onSubmit={submitReport}>
           <textarea
             value={reportReason}
             onChange={(event) => setReportReason(event.target.value)}
             placeholder="신고 사유 (선택)"
-            className="h-20 w-full rounded-xl border border-rose-900/20 bg-white px-3 py-2 text-sm"
+            className="h-20 w-full border border-stone-300 bg-[var(--paper-raised)] px-3 py-2 text-sm"
           />
           <button
             type="submit"
-            className="rounded-xl border border-rose-400 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700"
+            className="border border-[var(--danger)] bg-transparent px-3 py-2 text-sm font-semibold text-[var(--danger)]"
           >
             잘못된 위치 신고
           </button>

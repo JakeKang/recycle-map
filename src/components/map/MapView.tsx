@@ -9,7 +9,16 @@ import { getPointIcon } from "@/lib/map-marker-icon";
 import { PublicPoint as CollectionPoint } from "@/lib/public-mappers";
 import L from "leaflet";
 import { memo, useCallback, useEffect, useMemo, useRef } from "react";
-import { MapContainer, Marker, Popup, TileLayer, ZoomControl, useMap, useMapEvents } from "react-leaflet";
+import {
+  AttributionControl,
+  MapContainer,
+  Marker,
+  Popup,
+  TileLayer,
+  ZoomControl,
+  useMap,
+  useMapEvents,
+} from "react-leaflet";
 import MarkerClusterGroup from "react-leaflet-markercluster";
 
 interface MapViewProps {
@@ -137,11 +146,17 @@ function MapView({
   onPointSelect,
   onBoundsChange,
 }: MapViewProps) {
+  const tileUrl =
+    process.env.NEXT_PUBLIC_MAP_TILE_URL?.trim() ||
+    "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
+  const tileAttribution =
+    process.env.NEXT_PUBLIC_MAP_TILE_ATTRIBUTION?.trim() ||
+    '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
   const registrationIcon = useMemo(
     () =>
       L.divIcon({
         className: "",
-        html: `<div style="width:34px;height:34px;border-radius:9999px;background:#047857;border:2px solid #065f46;box-shadow:0 8px 18px rgba(6,95,70,0.45);display:grid;place-items:center;color:#fff;font-weight:700;font-size:18px;">+</div>`,
+        html: `<div style="width:34px;height:34px;border-radius:var(--radius-pill);background:var(--trust);border:2px solid var(--trust-strong);box-shadow:var(--shadow-marker-registration);display:grid;place-items:center;color:var(--white);font-weight:700;font-size:18px;">+</div>`,
         iconSize: [34, 34],
         iconAnchor: [17, 34],
         popupAnchor: [0, -28],
@@ -173,15 +188,17 @@ function MapView({
       zoomSnap={1}
       zoomAnimation
       fadeAnimation={false}
+      attributionControl={false}
     >
       <ZoomControl position="bottomright" />
+      <AttributionControl position="topright" prefix={false} />
       <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-        url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
-        subdomains={["a", "b", "c", "d"]}
+        attribution={tileAttribution}
+        url={tileUrl}
+        maxZoom={19}
         updateWhenZooming={false}
         updateWhenIdle
-        keepBuffer={4}
+        keepBuffer={2}
       />
       <MapEvents onMapClick={onMapClick} onBoundsChange={onBoundsChange} />
       <FocusPointController focusedPoint={focusedPoint} />

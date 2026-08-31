@@ -16,11 +16,12 @@ export default defineConfig({
     command: `npm run dev -- --port ${port}`,
     url: baseURL,
     timeout: 120_000,
-    reuseExistingServer: true,
+    reuseExistingServer: false,
     env: {
       NEXTAUTH_URL: baseURL,
       NEXTAUTH_SECRET: "playwright-local-secret",
-      NEXT_PUBLIC_DEV_USER_ID: "playwright-ui-user",
+      NEXT_PUBLIC_DEV_USER_ID:
+        process.env.PLAYWRIGHT_DEV_USER_ID ?? "playwright-ui-user",
       ALLOW_DEV_USER_HEADER: "true",
       ALLOW_DB_FALLBACK_ON_ERROR: "true",
       FORCE_LOCAL_STORE: "true",

@@ -8,6 +8,7 @@ function markerVisualStateKey(point: CollectionPoint, selected: boolean) {
   return [
     point.category,
     point.status,
+    point.verificationStatus,
     point.reportCount >= 3 ? "alert" : "normal",
     selected ? "selected" : "default",
   ].join("|");
@@ -25,6 +26,7 @@ export function getPointIcon(point: CollectionPoint, selected: boolean) {
     html: createPointMarkerHtml({
       category: point.category,
       status: point.status,
+      verificationStatus: point.verificationStatus,
       reportCount: point.reportCount,
       selected,
     }),

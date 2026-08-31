@@ -12,6 +12,10 @@ const DAUM_POSTCODE_SCRIPT_URL =
 
 let scriptLoader: Promise<void> | null = null;
 
+function readDesignToken(name: string) {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
 function ensureDaumPostcodeScript() {
   if (window.daum?.Postcode) {
     return Promise.resolve();
@@ -94,8 +98,8 @@ export default function AddressSearch({ onSelect }: AddressSearchProps) {
         }
       },
       theme: {
-        searchBgColor: "#064e3b",
-        queryTextColor: "#ffffff",
+        searchBgColor: readDesignToken("--trust-strong"),
+        queryTextColor: readDesignToken("--white"),
       },
       width: "100%",
       height: "100%",
@@ -121,26 +125,26 @@ export default function AddressSearch({ onSelect }: AddressSearchProps) {
         ref={triggerButtonRef}
         type="button"
         onClick={handleOpen}
-        className="rounded-xl border border-emerald-900/20 bg-white px-3 py-2 text-xs text-stone-700 transition hover:bg-emerald-50"
+        className="border border-stone-300 bg-transparent px-3 py-2 text-xs font-semibold text-stone-700 transition hover:border-stone-500"
       >
         주소 검색 (Daum 우편번호)
       </button>
 
       {isMobile ? (
-        <div className={`${isEmbedOpen ? "block" : "hidden"} space-y-2 rounded-xl border border-emerald-900/15 bg-white p-2`}>
+        <div className={`${isEmbedOpen ? "block" : "hidden"} space-y-2 border border-stone-300 bg-white p-2`}>
           <div className="flex items-center justify-between">
             <p className="text-[11px] text-stone-500">모바일 주소 검색</p>
             <button
               type="button"
               onClick={() => setIsEmbedOpen(false)}
-              className="rounded-md border border-stone-300 bg-stone-50 px-2 py-1 text-[11px] text-stone-600"
+              className="border border-stone-300 bg-stone-50 px-2 py-1 text-[11px] text-stone-600"
             >
               닫기
             </button>
           </div>
           <div
             ref={embedContainerRef}
-            className="min-h-[380px] w-full overflow-hidden rounded-lg border border-stone-200"
+            className="min-h-[380px] w-full overflow-hidden border border-stone-300"
           />
         </div>
       ) : null}

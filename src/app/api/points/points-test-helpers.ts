@@ -16,6 +16,9 @@ export interface PointResponse {
   avgRating: number;
   reviewCount: number;
   reportCount: number;
+  verificationStatus: string;
+  accurateVoteCount: number;
+  inaccurateVoteCount: number;
   verifiedAt: string | null;
 }
 

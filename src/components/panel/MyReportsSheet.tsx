@@ -2,6 +2,7 @@
 
 import { useMyPoints, useUpdatePoint } from "@/hooks/usePoints";
 import { PublicPoint as CollectionPoint } from "@/lib/public-mappers";
+import { verificationStatusLabel } from "@/lib/point-verification";
 import { CATEGORIES, PointCategory } from "@/types/point";
 import { Edit3 } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -39,16 +40,19 @@ export default function MyReportsSheet({ open, onClose, onFocusPoint }: MyReport
 
   return (
     <>
-      <aside className="fixed bottom-0 left-0 z-[1150] h-[72vh] w-full overflow-y-auto rounded-t-3xl border border-emerald-900/15 bg-[linear-gradient(180deg,#f9fcf8_0%,#eef7f2_100%)] p-4 shadow-[0_-14px_30px_rgba(15,23,42,0.2)] md:bottom-auto md:left-auto md:right-0 md:top-0 md:h-screen md:max-w-[380px] md:rounded-none md:rounded-l-3xl md:border-l md:border-t-0">
+      <aside
+        aria-label="내 제보 관리"
+        className="elevation-sheet fixed bottom-0 left-0 z-[1150] h-[var(--sheet-mid-height)] w-full overflow-y-auto rounded-t-[var(--radius-sheet)] border-t border-stone-300 bg-[var(--paper-raised)] p-4 md:bottom-auto md:left-auto md:right-0 md:top-0 md:h-screen md:max-w-[var(--layout-detail-rail)] md:rounded-none md:border-l md:border-t-0"
+      >
         <div className="mb-3 flex items-center justify-between">
           <div>
-            <h2 className="text-base font-semibold text-stone-900">내 제보 관리</h2>
+            <h2 className="font-ledger text-lg font-bold text-[var(--ink)]">내 제보 관리</h2>
             <p className="text-[11px] text-stone-500">내가 등록한 수거함 정보를 정정할 수 있습니다.</p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg border border-stone-300 bg-white px-2 py-1 text-xs text-stone-700"
+            className="border border-stone-300 bg-transparent px-2 py-1 text-xs text-stone-700"
           >
             닫기
           </button>
@@ -63,7 +67,7 @@ export default function MyReportsSheet({ open, onClose, onFocusPoint }: MyReport
         ) : null}
 
         {!isLoading && !error && !hasPoints ? (
-          <p className="rounded-xl border border-dashed border-emerald-900/20 bg-white/80 p-3 text-sm text-stone-600">
+          <p className="border border-dashed border-stone-400 p-4 text-sm text-stone-600">
             아직 등록한 제보가 없습니다.
           </p>
         ) : null}
@@ -74,27 +78,35 @@ export default function MyReportsSheet({ open, onClose, onFocusPoint }: MyReport
           </p>
         ) : null}
 
-        <div className="space-y-2">
+        <div className="border-t border-stone-300">
           {points.map((point) => (
-            <div key={point.id} className="rounded-2xl border border-emerald-900/10 bg-white/90 p-3">
-              <p className="text-sm font-semibold text-stone-900">{point.title}</p>
+            <div key={point.id} className="border-b border-stone-300 py-3">
+              <div className="flex items-start justify-between gap-2">
+                <p className="text-sm font-semibold text-stone-900">{point.title}</p>
+                <span className={`verification-state verification-state--${point.verificationStatus} !px-1.5 !py-0.5 !text-[10px]`}>
+                  {verificationStatusLabel(point.verificationStatus)}
+                </span>
+              </div>
               <p className="text-xs text-stone-500">{point.address ?? "주소 미입력"}</p>
+              <p className="mt-1 text-[11px] tabular-nums text-stone-500">
+                정확 {point.accurateVoteCount} · 잘못 {point.inaccurateVoteCount}
+              </p>
               <div className="mt-2 flex items-center justify-between">
-                <span className="rounded-full border border-emerald-900/20 bg-emerald-50 px-2 py-0.5 text-[11px] text-emerald-900">
+                <span className="text-[11px] font-semibold text-stone-600">
                   {CATEGORIES[point.category].label}
                 </span>
                 <div className="flex gap-1">
                   <button
                     type="button"
                     onClick={() => onFocusPoint(point)}
-                    className="rounded-md border border-emerald-900/15 bg-white px-2 py-1 text-xs text-stone-700"
+                    className="border border-stone-300 bg-transparent px-2 py-1 text-xs text-stone-700"
                   >
                     지도 보기
                   </button>
                   <button
                     type="button"
                     onClick={() => openEditor(point)}
-                    className="inline-flex items-center gap-1 rounded-md border border-emerald-900/20 bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-900"
+                    className="inline-flex items-center gap-1 border border-[var(--trust)] bg-transparent px-2 py-1 text-xs font-semibold text-[var(--trust)]"
                   >
                     <Edit3 size={12} /> 편집
                   </button>
@@ -106,9 +118,9 @@ export default function MyReportsSheet({ open, onClose, onFocusPoint }: MyReport
       </aside>
 
       {editingPoint ? (
-        <div className="fixed inset-0 z-[1200] grid place-items-center bg-[rgba(15,23,42,0.45)] px-3" role="dialog" aria-modal="true" aria-label="내 제보 편집">
+        <div className="fixed inset-0 z-[1200] grid place-items-center bg-[var(--overlay-dialog)] px-3" role="dialog" aria-modal="true" aria-label="내 제보 편집">
           <form
-            className="w-full max-w-lg space-y-2 rounded-3xl border border-emerald-900/15 bg-[linear-gradient(160deg,#f8fcf6_0%,#eef8f3_100%)] p-4 shadow-[0_24px_50px_rgba(15,23,42,0.28)]"
+            className="elevation-dialog w-full max-w-lg space-y-2 rounded-[var(--radius-dialog)] border border-stone-300 bg-[var(--paper-raised)] p-5"
             onSubmit={async (event) => {
               event.preventDefault();
               try {
@@ -128,12 +140,12 @@ export default function MyReportsSheet({ open, onClose, onFocusPoint }: MyReport
             }}
           >
             <div className="mb-1 flex items-center justify-between">
-              <h3 className="text-base font-semibold text-stone-900">제보 정보 편집</h3>
+              <h3 className="font-ledger text-lg font-bold text-[var(--ink)]">제보 정보 편집</h3>
               <button
                 type="button"
                 onClick={() => setEditingPoint(null)}
                 disabled={updateMutation.isPending}
-                className="rounded-lg border border-stone-300 bg-white px-2 py-1 text-xs text-stone-700"
+                className="border border-stone-300 bg-transparent px-2 py-1 text-xs text-stone-700"
               >
                 취소
               </button>
@@ -143,7 +155,7 @@ export default function MyReportsSheet({ open, onClose, onFocusPoint }: MyReport
               value={title}
               onChange={(event) => setTitle(event.target.value)}
               disabled={updateMutation.isPending}
-              className="w-full rounded-xl border border-emerald-900/20 bg-white px-3 py-2 text-sm"
+              className="w-full border border-stone-300 bg-white px-3 py-2 text-sm"
               placeholder="제목"
               required
             />
@@ -151,7 +163,7 @@ export default function MyReportsSheet({ open, onClose, onFocusPoint }: MyReport
               value={category}
               onChange={(event) => setCategory(event.target.value as PointCategory)}
               disabled={updateMutation.isPending}
-              className="w-full rounded-xl border border-emerald-900/20 bg-white px-3 py-2 text-sm"
+              className="w-full border border-stone-300 bg-white px-3 py-2 text-sm"
             >
               {(Object.keys(CATEGORIES) as PointCategory[]).map((key) => (
                 <option key={key} value={key}>
@@ -163,14 +175,14 @@ export default function MyReportsSheet({ open, onClose, onFocusPoint }: MyReport
               value={address}
               onChange={(event) => setAddress(event.target.value)}
               disabled={updateMutation.isPending}
-              className="w-full rounded-xl border border-emerald-900/20 bg-white px-3 py-2 text-sm"
+              className="w-full border border-stone-300 bg-white px-3 py-2 text-sm"
               placeholder="주소"
             />
             <textarea
               value={description}
               onChange={(event) => setDescription(event.target.value)}
               disabled={updateMutation.isPending}
-              className="h-24 w-full rounded-xl border border-emerald-900/20 bg-white px-3 py-2 text-sm"
+              className="h-24 w-full border border-stone-300 bg-white px-3 py-2 text-sm"
               placeholder="설명"
             />
 
@@ -185,7 +197,7 @@ export default function MyReportsSheet({ open, onClose, onFocusPoint }: MyReport
             <button
               type="submit"
               disabled={updateMutation.isPending}
-              className="w-full rounded-xl border border-emerald-900 bg-emerald-900 px-3 py-2 text-sm font-semibold text-emerald-50 disabled:opacity-70"
+              className="w-full border border-[var(--trust)] bg-[var(--trust)] px-3 py-2 text-sm font-semibold text-white disabled:opacity-70"
             >
               {updateMutation.isPending ? "저장 중..." : "저장하기"}
             </button>

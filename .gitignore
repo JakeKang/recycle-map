@@ -27,8 +27,8 @@
 *.pem
 .sisyphus/
 .sisypuhs/
-docs/
 test-results/
+.impeccable/questions/
 
 # debug
 npm-debug.log*

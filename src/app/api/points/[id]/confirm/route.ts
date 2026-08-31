@@ -1,7 +1,10 @@
 import { consumeRateLimit } from "@/lib/rate-limit";
+import { formatValidationIssues } from "@/lib/api-error";
+import { readJsonBody } from "@/lib/http-body";
 import { resolveClientAddress, isSameOriginRequest } from "@/lib/request-security";
 import { repository } from "@/lib/data-repository";
 import { isAdminUserId, resolveRequestUserId } from "@/lib/request-user";
+import { adminVerificationDecisionSchema } from "@/lib/validators";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(
@@ -26,8 +29,8 @@ export async function POST(
     return NextResponse.json({ message: "포인트를 찾을 수 없습니다." }, { status: 404 });
   }
 
-  if (point.userId !== userId && !isAdminUserId(userId)) {
-    return NextResponse.json({ message: "본인이 등록한 수거함만 확인 처리할 수 있습니다." }, { status: 403 });
+  if (!isAdminUserId(userId)) {
+    return NextResponse.json({ message: "관리자만 검증 상태를 조정할 수 있습니다." }, { status: 403 });
   }
 
   const clientAddress = resolveClientAddress(request);
@@ -46,7 +49,23 @@ export async function POST(
     );
   }
 
-  const updated = await repository.patchPoint(id, { verifiedAt: new Date().toISOString() });
+  const bodyResult = await readJsonBody(request);
+  if (!bodyResult.ok) {
+    return NextResponse.json({ message: bodyResult.message }, { status: 400 });
+  }
+  const parsed = adminVerificationDecisionSchema.safeParse(bodyResult.data);
+  if (!parsed.success) {
+    return NextResponse.json(
+      { message: formatValidationIssues(parsed.error.issues) },
+      { status: 400 },
+    );
+  }
+
+  const updated = await repository.patchPoint(id, {
+    verificationOverride: parsed.data.status,
+    verificationStatus: parsed.data.status,
+    verifiedAt: parsed.data.status === "verified" ? new Date().toISOString() : null,
+  });
   if (!updated) {
     return NextResponse.json({ message: "포인트를 찾을 수 없습니다." }, { status: 404 });
   }

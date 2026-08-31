@@ -6,11 +6,18 @@ import type { Review } from "@/types/review";
  * userId는 소셜 로그인 sub claim이므로 외부에 노출하면 안 됨.
  */
 
-export type PublicPoint = Omit<CollectionPoint, "userId">;
+export type PublicPoint = Omit<CollectionPoint, "userId" | "verificationOverride"> & {
+  verificationSource: "community" | "admin";
+};
 export type PublicReview = Omit<Review, "userId">;
 
-export function toPublicPoint({ userId: _userId, ...rest }: CollectionPoint): PublicPoint {
-  return rest;
+export function toPublicPoint(
+  { userId: _userId, verificationOverride, ...rest }: CollectionPoint,
+): PublicPoint {
+  return {
+    ...rest,
+    verificationSource: verificationOverride ? "admin" : "community",
+  };
 }
 
 export function toPublicReview({ userId: _userId, ...rest }: Review): PublicReview {

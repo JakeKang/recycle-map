@@ -1,0 +1,166 @@
+{
+  "title": "RecycleMap의 새 시각 체계 선택",
+  "question": "지도와 시민 검증이 한 화면에서 가장 명확하게 읽히는 방향을 선택해 주세요. 선택한 체계는 홈, 상세, 제보, 관리자 화면 전체에 적용됩니다.",
+  "options": [
+    {
+      "id": "assigned",
+      "label": "시민 검증 집계표",
+      "kicker": "THE ROLL",
+      "lineage": "투표 집계표와 공공 데이터 원장",
+      "thesis": "지도 옆에 검증 근거와 집계가 붙어 정보의 신뢰 형성 과정을 그대로 보여준다.",
+      "palette": ["#F7F6F1", "#19231F", "#176B4D", "#C68A2D", "#B54A3B"],
+      "materials": ["무광 종이색 바탕", "얇은 집계선", "상태 도장"],
+      "viewport": "넓은 지도, 왼쪽 탐색 레일, 오른쪽 선택 지점 원장이 한 화면에 이어지고 확정 조건이 표식처럼 보인다.",
+      "risk": "집계표의 은유를 과하게 쓰면 공공기관 업무 화면처럼 느껴질 수 있다.",
+      "raised": [
+        {"from": "iridescent-edge", "raise": "불확실성은 넓은 색면 대신 상태 경계선 한 줄로만 표현한다."},
+        {"from": "industrial-label", "raise": "모든 상태와 행동은 장식 없는 직접적인 한국어 레이블을 갖는다."},
+        {"from": "factory-catalog", "raise": "제보와 검증에는 추적 가능한 짧은 식별 체계를 부여한다."},
+        {"from": "ascii-grid", "raise": "정보 밀도가 높아져도 정렬과 간격 규칙을 무너뜨리지 않는다."}
+      ],
+      "wireframe": {"cols": 12, "rows": 10, "regions": [
+        {"label": "탐색·필터 레일", "x": 0, "y": 0, "w": 3, "h": 10, "accent": true},
+        {"label": "지도", "x": 3, "y": 0, "w": 6, "h": 10},
+        {"label": "검증 원장", "x": 9, "y": 0, "w": 3, "h": 10, "accent": true}
+      ]},
+      "comp": ".impeccable/mocks/decision/assigned.webp"
+    },
+    {
+      "id": "model-pick",
+      "label": "현장 점검 기록지",
+      "kicker": "IMPECCABLE’S PICK",
+      "lineage": "현장 조사표와 점검 체크리스트",
+      "thesis": "사용자가 지도를 훑고 지점을 점검하는 과정을 하나의 정돈된 작업면으로 만든다.",
+      "palette": ["#FCFCF9", "#202622", "#247052", "#D9A441", "#E6E5DE"],
+      "materials": ["백색 작업지", "체크 표시", "절제된 구분선"],
+      "viewport": "검색과 필터는 얇은 상단 도구막대에, 지도와 점검 상세는 7:5 분할로 배치된다.",
+      "risk": "가장 익숙하고 실용적인 만큼 강한 개성을 잃으면 일반 행정 대시보드처럼 보일 수 있다.",
+      "wireframe": {"cols": 12, "rows": 10, "regions": [
+        {"label": "상단 도구막대", "x": 0, "y": 0, "w": 12, "h": 1, "accent": true},
+        {"label": "지도", "x": 0, "y": 1, "w": 7, "h": 9},
+        {"label": "점검 상세", "x": 7, "y": 1, "w": 5, "h": 9}
+      ]},
+      "comp": ".impeccable/mocks/decision/model-pick.webp"
+    },
+    {
+      "id": "challenger-monochrome",
+      "label": "단색 제품 증거판",
+      "verdict": "competitive",
+      "lineage": "중립 단색 소프트웨어 제품 체계",
+      "thesis": "거의 단색인 화면에서 지도와 실제 검증 수치만 한 가지 녹색으로 증명한다.",
+      "palette": ["#FAFAF8", "#111513", "#777C79", "#93B83E"],
+      "materials": ["미세한 중립 명도계", "헤어라인", "단일 강조색"],
+      "viewport": "지도와 상세 증거가 넓은 여백 안에서 나란히 놓이고 주요 행동만 검은 면으로 채워진다.",
+      "case": "정돈과 명료성은 강하지만 시민 운영 도구보다 소프트웨어 홍보 화면에 가까운 문법이다.",
+      "risk": "절제가 지나치면 지역성과 참여의 온도가 사라질 수 있다.",
+      "wireframe": {"cols": 12, "rows": 10, "regions": [
+        {"label": "간결한 탐색", "x": 0, "y": 0, "w": 2, "h": 10},
+        {"label": "지도 증거", "x": 2, "y": 0, "w": 7, "h": 7, "accent": true},
+        {"label": "검증 수치", "x": 9, "y": 0, "w": 3, "h": 7},
+        {"label": "최근 활동", "x": 2, "y": 7, "w": 10, "h": 3}
+      ]},
+      "comp": ".impeccable/mocks/decision/challenger-monochrome.webp",
+      "hero": "https://impeccable.style/worlds/cards/digital-design-canon-monochrome-product-marketing-hero.webp",
+      "board": "https://impeccable.style/worlds/cards/digital-design-canon-monochrome-product-marketing.webp"
+    },
+    {
+      "id": "challenger-darkroom",
+      "label": "검증 현상실",
+      "verdict": "competitive",
+      "lineage": "암실의 현상·정착 단계",
+      "thesis": "제보가 투표를 거쳐 서서히 확정 정보로 드러나는 과정을 단계형 작업면으로 만든다.",
+      "palette": ["#17130D", "#F0A11A", "#E8DCC3", "#77736C"],
+      "materials": ["호박색 안전등", "은염 회색", "노출 시험띠"],
+      "viewport": "어두운 지도 위 선택 지점이 밝아지고 하단 단계띠가 확인 중에서 확정까지 이어진다.",
+      "case": "검증 단계는 강하게 설명하지만 어두운 호박색 환경이 지도 가독성과 공공 서비스 친숙성을 약화한다.",
+      "risk": "재활용 지도보다 사진 도구로 오인될 수 있고 장시간 사용 시 피로도가 높다.",
+      "wireframe": {"cols": 12, "rows": 10, "regions": [
+        {"label": "단계 탐색", "x": 0, "y": 0, "w": 2, "h": 10, "accent": true},
+        {"label": "암실 지도", "x": 2, "y": 0, "w": 7, "h": 8},
+        {"label": "현상 상세", "x": 9, "y": 0, "w": 3, "h": 8},
+        {"label": "검증 단계띠", "x": 2, "y": 8, "w": 10, "h": 2, "accent": true}
+      ]},
+      "comp": ".impeccable/mocks/decision/challenger-darkroom.webp",
+      "hero": "https://impeccable.style/worlds/cards/signals-instruments-darkroom-safelight-bay-hero.webp",
+      "board": "https://impeccable.style/worlds/cards/signals-instruments-darkroom-safelight-bay.webp"
+    },
+    {
+      "id": "iridescent-edge",
+      "label": "불확실성의 색 경계",
+      "verdict": "declined",
+      "lineage": "무지갯빛 구름 가장자리",
+      "thesis": "검증 전후의 경계만 옅은 색 띠로 표시한다.",
+      "palette": ["#F8F9F7", "#3E4845", "#94CDB5", "#D7A8C7", "#8D78B6"],
+      "materials": ["구름빛 백색", "얇은 분광 띠"],
+      "viewport": "밝은 지도 가장자리에 상태별 분광선이 붙는다.",
+      "case": "불확실성은 표현하지만 재활용 위치 검증이라는 목적을 스스로 설명하지 못한다.",
+      "kept": "색은 상태의 경계에서만 쓴다는 절제.",
+      "risk": "파스텔 장식으로 읽혀 신뢰 상태가 흐려질 수 있다.",
+      "comp": ".impeccable/mocks/decision/iridescent-edge.webp",
+      "hero": "https://impeccable.style/worlds/cards/clouds-storms-auroras-iridescent-cloud-edge-hero.webp"
+    },
+    {
+      "id": "industrial-label",
+      "label": "산업 라벨 시스템",
+      "verdict": "declined",
+      "lineage": "창고 라벨과 안전 표식",
+      "thesis": "모든 기능과 상태를 큰 직설형 라벨로 표시한다.",
+      "palette": ["#FAFAF7", "#111111", "#ED6A20"],
+      "materials": ["흑백 라벨", "안전 주황 표식"],
+      "viewport": "지도 구역과 제보 상태가 굵은 라벨로 나뉜다.",
+      "case": "행동 명료성은 높지만 일상 시민 서비스에 지나치게 공격적이다.",
+      "kept": "모호한 아이콘 대신 행동을 그대로 말하는 레이블.",
+      "risk": "경고 문법이 서비스 전체를 위험 상황처럼 보이게 한다.",
+      "comp": ".impeccable/mocks/decision/industrial-label.webp",
+      "hero": "https://impeccable.style/worlds/cards/textiles-weave-drape-fashion-industrial-quote-grammar-hero.webp"
+    },
+    {
+      "id": "factory-catalog",
+      "label": "공장 기록 카탈로그",
+      "verdict": "declined",
+      "lineage": "엄격한 번호형 음반·기록 카탈로그",
+      "thesis": "모든 제보와 검증을 식별 번호와 순서로 추적한다.",
+      "palette": ["#101211", "#F4F5F1", "#176B4D", "#D5A52E"],
+      "materials": ["무광 흑색", "백색 선 도표", "색상 코드"],
+      "viewport": "검은 지도와 번호형 목록이 엄격한 인덱스로 이어진다.",
+      "case": "추적성은 강하지만 텍스트를 색 코드로 숨겨 일반 사용자의 이해를 늦춘다.",
+      "kept": "제보와 처리 이력에 일관된 식별 규칙을 부여하는 엄격함.",
+      "risk": "야간형 기록 시스템처럼 보여 지도 탐색의 친근함을 잃는다.",
+      "comp": ".impeccable/mocks/decision/factory-catalog.webp",
+      "hero": "https://impeccable.style/worlds/cards/brand-identity-canon-saville-catalog-sleeve-hero.webp"
+    },
+    {
+      "id": "ascii-grid",
+      "label": "문자 밀도 지도",
+      "verdict": "declined",
+      "lineage": "실시간 ASCII 장면",
+      "thesis": "지점 밀도를 문자 농도로 바꿔 지도 전체를 하나의 격자로 만든다.",
+      "palette": ["#07120D", "#67D391", "#C7F3D6"],
+      "materials": ["단색 인광", "고정폭 문자 격자"],
+      "viewport": "지도와 레이블이 모두 문자 셀 안에서 재구성된다.",
+      "case": "데이터 밀도 표현은 독특하지만 주소와 지도 조작의 명료성을 크게 해친다.",
+      "kept": "어떤 정보량에서도 정렬이 흐트러지지 않는 격자 규율.",
+      "risk": "접근성과 지도 친숙성을 동시에 희생한다.",
+      "comp": ".impeccable/mocks/decision/ascii-grid.webp",
+      "hero": "https://impeccable.style/worlds/cards/medium-native-ascii-live-scene-render-hero.webp"
+    }
+  ],
+  "reroll": {"registers": ["safer", "bolder"]},
+  "buildPath": {"value": "code", "toggle": true},
+  "canon": true,
+  "canonCard": {
+    "label": "일반적인 지도 앱",
+    "thesis": "흰색 카드와 녹색 강조색을 사용한 익숙한 지도 앱을 높은 완성도로 구현한다.",
+    "palette": ["#FFFFFF", "#1F2937", "#16A34A", "#E5E7EB"],
+    "materials": ["둥근 흰색 카드", "부드러운 그림자", "일반 지도 마커"],
+    "viewport": "전체 지도 위에 검색창과 둥근 상세 카드를 띄우는 익숙한 배열이다.",
+    "risk": "사용하기는 쉽지만 다른 지도 서비스와 구별되지 않고 카드 남용이 재발할 수 있다.",
+    "wireframe": {"cols": 12, "rows": 10, "regions": [
+      {"label": "검색 카드", "x": 1, "y": 1, "w": 4, "h": 1, "accent": true},
+      {"label": "전체 지도", "x": 0, "y": 0, "w": 12, "h": 10},
+      {"label": "상세 카드", "x": 8, "y": 2, "w": 3, "h": 6, "accent": true}
+    ]},
+    "comp": ".impeccable/mocks/decision/canon.webp"
+  },
+  "steer": true
+}

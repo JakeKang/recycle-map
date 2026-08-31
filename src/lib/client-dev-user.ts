@@ -11,6 +11,11 @@ export function buildClientJsonHeaders(): Record<string, string> {
   return headers;
 }
 
+export function getClientDevUserId() {
+  const devUserId = process.env.NEXT_PUBLIC_DEV_USER_ID;
+  return devUserId && devUserId.trim().length > 0 ? devUserId.trim() : null;
+}
+
 export function buildClientHeaders(): Record<string, string> {
   const headers: Record<string, string> = {};
   const devUserId = process.env.NEXT_PUBLIC_DEV_USER_ID;

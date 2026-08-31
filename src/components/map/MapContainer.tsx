@@ -7,7 +7,7 @@ import { memo } from "react";
 const MapView = dynamic(() => import("./MapView"), {
   ssr: false,
   loading: () => (
-    <div className="flex h-full w-full items-center justify-center bg-emerald-50 text-emerald-900/70">
+    <div className="flex h-full w-full items-center justify-center bg-[var(--paper-muted)] text-stone-600">
       지도를 불러오는 중...
     </div>
   ),

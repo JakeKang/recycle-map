@@ -4,7 +4,7 @@ test.describe("local UI e2e", () => {
   test("map state syncs with url search params", async ({ page }) => {
     await page.goto("/?q=시청&category=battery&point=seed-1&sheet=full");
 
-    await expect(page.getByRole("heading", { name: "우리동네 자원순환 알리미" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "RecycleMap" })).toBeVisible();
     await expect(page.getByPlaceholder("주소 또는 장소명으로 검색")).toHaveValue("시청");
 
     await expect.poll(() => new URL(page.url()).searchParams.get("category")).toBe("battery");
@@ -62,7 +62,7 @@ test.describe("local UI e2e", () => {
     const title = `UI 자동 포인트 ${Date.now()}`;
 
     await page.goto("/");
-    await expect(page.getByRole("heading", { name: "우리동네 자원순환 알리미" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "RecycleMap" })).toBeVisible();
 
     const map = page.locator(".leaflet-container:visible").first();
     await expect(map).toBeVisible();
@@ -91,6 +91,7 @@ test.describe("local UI e2e", () => {
     await page.goto(`/point/${createdPoint.id}`);
 
     await expect(page.getByRole("heading", { name: title })).toBeVisible();
+    await expect(page.getByRole("button", { name: "정확해요" })).toBeDisabled();
 
     const createReviewResponsePromise = page.waitForResponse(
       (response) =>
@@ -116,6 +117,25 @@ test.describe("local UI e2e", () => {
 
     const createReportResponse = await createReportResponsePromise;
     expect(createReportResponse.status()).toBe(201);
+  });
+
+  test("community verification vote updates trust state", async ({ page }) => {
+    await page.goto("/?point=seed-2&sheet=full");
+
+    const detailSheet = page.locator('aside[aria-label="포인트 상세 시트"]');
+    await expect(detailSheet.getByText("확인 중", { exact: true }).first()).toBeVisible();
+
+    const accurateVote = detailSheet.getByRole("button", { name: "정확해요" });
+    const voteResponse = page.waitForResponse(
+      (response) =>
+        response.url().includes("/api/points/seed-2/votes") &&
+        response.request().method() === "POST",
+    );
+    await accurateVote.click();
+    expect((await voteResponse).status()).toBe(200);
+
+    await expect(accurateVote).toHaveAttribute("aria-pressed", "true");
+    await expect(detailSheet.getByText("3", { exact: true })).toBeVisible();
   });
 
   test("mobile map-first menu flow remains consistent", async ({ page }) => {
