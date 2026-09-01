@@ -87,6 +87,9 @@ jobs:
       - name: Lint
         run: pnpm lint
 
+      - name: Documentation integrity
+        run: pnpm docs:audit
+
       - name: Unit and integration tests
         run: pnpm test
 

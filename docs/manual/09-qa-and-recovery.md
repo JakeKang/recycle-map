@@ -6,14 +6,29 @@
 
 ```bash
 pnpm lint
+pnpm exec tsc --noEmit
 pnpm test
 pnpm test:e2e
+DATABASE_URL=<검증용-PostGIS-URL> pnpm test:db-security
 pnpm build
 pnpm security:audit
 pnpm predeploy:check:full
+pnpm docs:audit
 ```
 
-`predeploy:check:full`은 개발·운영 환경 파일, 필수 마이그레이션, 운영 HTTPS와 비밀키 길이, 서비스 역할 키, 개발 우회 기능 비활성화를 검사합니다. 실제 값은 출력이나 문서에 복사하지 않습니다.
+`test:db-security`는 운영 DB가 아닌 폐기 가능한 PostGIS DB에서 migration을 처음부터 적용하고 RLS·권한·데이터 보존·원자 사진 연결·legacy OAuth 매핑을 검증합니다. `predeploy:check:full`은 개발·운영 환경 파일, 필수 migration, 운영 HTTPS와 비밀키 길이, 서비스 역할 키, 암호화 키, 저장소 모드, 개발 우회 기능 비활성화를 검사합니다. 실제 값은 출력이나 문서에 복사하지 않습니다.
+
+## 운영 보안 전환
+
+1. 운영 DB와 private Storage를 백업합니다.
+2. `supabase/migrations`를 시간순으로 적용합니다.
+3. 기존 raw OAuth ID는 인증 로그로 provider를 확인한 경우에만 `legacy_user_identity_mappings`에 승인합니다.
+4. `pnpm security:reencrypt` dry-run 후 `pnpm security:reencrypt -- --apply`를 실행합니다.
+5. `pnpm security:verify-encryption`이 성공하는지 확인합니다.
+6. 정상·변조·타 사용자 사진으로 signed upload smoke를 수행하고 OAuth callback을 실제 제공자별로 확인합니다.
+7. 만료 업로드 정리를 위해 `pnpm security:cleanup-uploads`를 하루 한 번 실행하도록 scheduler를 설정합니다.
+
+실제 OAuth 제공자, Supabase Storage CORS, 만료 서명 token과 운영 scheduler는 로컬 fixture만으로 동일하게 재현할 수 없습니다. 운영과 분리된 staging 프로젝트에서 확인 결과를 배포 증적으로 남깁니다.
 
 ## 수동 핵심 시나리오
 

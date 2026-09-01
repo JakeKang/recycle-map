@@ -22,4 +22,4 @@ RecycleMap v1.0의 사용자·운영·개발 문서 모음입니다. 화면 이�
 2. 기존 캡처가 현재 UI와 일치하는지 확인하고 필요한 이미지만 다시 만듭니다.
 3. 매뉴얼의 경로, 버튼 이름, 저장 결과, 복구 절차를 수정합니다.
 4. 커버리지 매트릭스의 모든 행을 `covered`, `documented-limitation`, `out-of-scope` 중 하나로 유지합니다.
-5. `node /Users/yjkang/.agents/skills/create-product-manual/scripts/audit-manual.mjs docs/manual`로 문서 감사를 실행합니다.
+5. `pnpm docs:audit`로 문서 링크·이미지·placeholder 감사를 실행합니다.

@@ -14,12 +14,16 @@ flowchart LR
   G --> R[Data Repository]
   R -->|기본 운영 경로| S[(Supabase PostgreSQL)]
   R -->|명시적 로컬/테스트 경로| M[(메모리 저장소)]
-  A --> F[(로컬 업로드 디렉터리)]
+  A -->|운영 서명·완료 검증| P[(private Supabase Storage)]
+  B -->|운영 signed direct upload| P
+  A -->|개발 전용| F[(로컬 업로드 디렉터리)]
   B -->|지도 타일| T[구성 가능한 타일 제공자\n기본 OpenStreetMap]
   N --> O[NextAuth\nCredentials / Google / Kakao / Naver]
 ```
 
 브라우저는 TanStack Query로 서버 데이터를 가져오고 Zustand로 지도·모바일 작업면 상태를 관리합니다. 지도 목록과 상세는 `/api/points` 계열 Route Handler를 사용합니다. `data-repository.ts`가 Supabase 행과 앱 도메인 타입 사이를 변환하며, `FORCE_LOCAL_STORE=true`일 때 반복 가능한 로컬 메모리 데이터를 사용합니다.
+
+운영 사진은 브라우저가 `/api/upload/intent`에서 받은 일회성 서명으로 private Storage에 직접 전송합니다. `/api/upload/:id/complete`가 저장 객체를 다시 내려받아 검증한 뒤에만 위치에 연결할 수 있습니다. 로컬 디렉터리 업로드 API는 production에서 `410`으로 차단됩니다.
 
 ## 주요 요청 흐름
 

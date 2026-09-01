@@ -30,6 +30,7 @@
 | REG-03 | 로그인 사용자 | 사진 업로드 | covered | [04](./04-register-location.md), [09](./09-qa-and-recovery.md) |
 | REG-04 | 로그인 사용자 | 50m 동일 분류 중복 | covered | [04](./04-register-location.md), `04-register-duplicate.png` |
 | REG-05 | 로그인 사용자 | 일일·요청 제한 | covered | [04](./04-register-location.md), [09](./09-qa-and-recovery.md) |
+| REG-06 | 로그인 사용자 | production signed upload·객체 검증 실패 | documented-limitation | [04](./04-register-location.md), [09](./09-qa-and-recovery.md): staging Supabase 필요 |
 | CONTRIB-01 | 로그인 사용자 | 리뷰 작성 | covered | [05](./05-reviews-reports-suggestions.md), `05-review-dialog.png` |
 | CONTRIB-02 | 로그인 사용자 | 문제 신고 | covered | [05](./05-reviews-reports-suggestions.md), `05-report-dialog.png` |
 | CONTRIB-03 | 로그인 사용자 | 정보 수정 제안 | covered | [05](./05-reviews-reports-suggestions.md), `05-suggestion-dialog.png` |
@@ -39,17 +40,20 @@
 | AUTH-01 | 방문자 | 테스트 계정 로그인 | covered | [07](./07-login-and-account.md), `07-login.png` |
 | AUTH-02 | 방문자 | 잘못된 계정 정보 | covered | [07](./07-login-and-account.md), `07-login-error.png` |
 | AUTH-03 | 방문자 | Google·Kakao·Naver 제공자 화면 | documented-limitation | [07](./07-login-and-account.md): 외부 제공자 UI |
+| AUTH-04 | 기존 사용자 | legacy OAuth 승인 매핑 실패 | documented-limitation | [07](./07-login-and-account.md), [09](./09-qa-and-recovery.md): 운영 인증 로그 필요 |
 | ACCOUNT-01 | 로그인 사용자 | 회원정보·빠른 이동·로그아웃 | covered | [07](./07-login-and-account.md), `07-account.png` |
 | ADMIN-01 | 관리자 | 관리자 접근 제어 | covered | [08](./08-admin-operations.md), [09](./09-qa-and-recovery.md) |
 | ADMIN-02 | 관리자 | 신고 필터·해결·기각 | covered | [08](./08-admin-operations.md), `08-admin-reports.png` |
 | ADMIN-03 | 관리자 | 제안 필터·적용·기각 | covered | [08](./08-admin-operations.md), `08-admin-suggestions.png` |
 | QA-01 | 운영자 | 자동 릴리스 검사 | covered | [09](./09-qa-and-recovery.md) |
 | QA-02 | 운영자 | DB·지도·업로드 장애 복구 | covered | [09](./09-qa-and-recovery.md) |
+| OPS-01 | 운영자 | migration·legacy 매핑·재암호화 전환 | covered | [09](./09-qa-and-recovery.md), [시스템 구조](../architecture.md) |
+| OPS-02 | 운영자 | 만료 업로드 정리 scheduler | covered | [09](./09-qa-and-recovery.md) |
 
 ## 집계
 
-- 전체: 41
-- covered: 38
-- documented-limitation: 3
+- 전체: 45
+- covered: 40
+- documented-limitation: 5
 - out-of-scope: 0
 - 미분류: 0

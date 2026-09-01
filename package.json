@@ -18,6 +18,7 @@
     "security:reencrypt": "node scripts/reencrypt-sensitive-data.mjs",
     "security:verify-encryption": "node scripts/reencrypt-sensitive-data.mjs --verify",
     "security:cleanup-uploads": "node scripts/cleanup-expired-uploads.mjs",
+    "docs:audit": "node scripts/audit-manual.mjs docs/manual",
     "predeploy:check": "node scripts/predeploy-check.mjs --target=development",
     "predeploy:check:full": "node scripts/predeploy-check.mjs --target=all",
     "predeploy:verify": "pnpm predeploy:check:full && pnpm smoke:full && pnpm test",
