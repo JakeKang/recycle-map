@@ -7,6 +7,7 @@ import { resolveClientAddress, isSameOriginRequest } from "@/lib/request-securit
 import { resolveRequestUserId } from "@/lib/request-user";
 import { containsSpam } from "@/lib/spam-filter";
 import { pointSchema } from "@/lib/validators";
+import { LocalStorageError } from "@/lib/local-file-storage";
 import { PointCategory, PointQuery } from "@/types/point";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -19,6 +20,15 @@ export function resetPointsRouteStateForTests() {
 
 const KOREA_LAT = { min: 33, max: 43 } as const;
 const KOREA_LNG = { min: 124, max: 132 } as const;
+const POINT_CATEGORIES = new Set([
+  "battery",
+  "electronics",
+  "medicine",
+  "fluorescent",
+  "toner",
+  "other",
+]);
+const POINT_STATUSES = new Set(["pending", "active", "reported", "inactive", "visible"]);
 
 function parseNumber(value: string | null) {
   if (!value) {
@@ -84,6 +94,17 @@ export async function GET(request: NextRequest) {
     return response;
   }
 
+  const rawCategory = request.nextUrl.searchParams.get("category");
+  const rawStatus = request.nextUrl.searchParams.get("status");
+  const rawQuery = request.nextUrl.searchParams.get("q");
+  if (
+    (rawCategory && !POINT_CATEGORIES.has(rawCategory)) ||
+    (rawStatus && !POINT_STATUSES.has(rawStatus)) ||
+    (rawQuery && rawQuery.length > 100)
+  ) {
+    return NextResponse.json({ message: "잘못된 조회 조건입니다." }, { status: 400 });
+  }
+
   const query = buildQuery(request.nextUrl.searchParams);
   const data = await repository.listPoints(query);
   const { response, elapsedMs } = buildPointsResponse(data, startedAt);
@@ -112,7 +133,7 @@ export async function POST(request: NextRequest) {
   }
 
   const clientAddress = resolveClientAddress(request);
-  const rateLimit = consumeRateLimit({
+  const rateLimit = await consumeRateLimit({
     key: `points:create:${userId}:${clientAddress}`,
     windowMs: 60_000,
     max: 20,
@@ -164,26 +185,52 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const created = await repository.createPoint({
-    userId,
-    title: parsed.data.title,
-    category: parsed.data.category,
-    description: parsed.data.description ?? null,
-    lat: parsed.data.lat,
-    lng: parsed.data.lng,
-    address: parsed.data.address ?? null,
-    status: "active",
-    avgRating: 0,
-    reviewCount: 0,
-    reportCount: 0,
-    verificationStatus: "pending",
-    accurateVoteCount: 0,
-    inaccurateVoteCount: 0,
-    verificationOverride: null,
-    verifiedAt: null,
-    photoIds: parsed.data.photoIds,
-  });
-
+  let created;
+  try {
+    created = await repository.createPoint({
+      userId,
+      title: parsed.data.title,
+      category: parsed.data.category,
+      description: parsed.data.description ?? null,
+      lat: parsed.data.lat,
+      lng: parsed.data.lng,
+      address: parsed.data.address ?? null,
+      status: "active",
+      avgRating: 0,
+      reviewCount: 0,
+      reportCount: 0,
+      verificationStatus: "pending",
+      accurateVoteCount: 0,
+      inaccurateVoteCount: 0,
+      verificationOverride: null,
+      verifiedAt: null,
+      photoIds: parsed.data.photoIds,
+    });
+  } catch (error) {
+    if (error instanceof LocalStorageError) {
+      return NextResponse.json({ message: error.message }, { status: error.status });
+    }
+    if (
+      error &&
+      typeof error === "object" &&
+      "code" in error &&
+      (error as { code?: unknown }).code === "P0001"
+    ) {
+      const isQuota =
+        "message" in error &&
+        typeof (error as { message?: unknown }).message === "string" &&
+        (error as { message: string }).message.includes("daily point quota");
+      return NextResponse.json(
+        {
+          message: isQuota
+            ? "일일 등록 한도(5건)를 초과했습니다."
+            : "첨부할 수 없는 이미지가 포함되어 있습니다.",
+        },
+        { status: isQuota ? 429 : 400 },
+      );
+    }
+    throw error;
+  }
   if (!current || current.date !== today) {
     registrationCounter.set(userId, { date: today, count: 1 });
   } else {

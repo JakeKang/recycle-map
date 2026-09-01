@@ -2,13 +2,13 @@ import { expect, test } from "@playwright/test";
 
 test.describe("local UI e2e", () => {
   test("map state syncs with url search params", async ({ page }) => {
-    await page.goto("/?q=시청&category=battery&point=seed-1&sheet=full");
+    await page.goto("/?q=시청&category=battery&point=00000000-0000-4000-8000-000000000001&sheet=full");
 
     await expect(page.getByRole("heading", { name: "RecycleMap" })).toBeVisible();
     await expect(page.getByPlaceholder("주소 또는 장소명으로 검색")).toHaveValue("시청");
 
     await expect.poll(() => new URL(page.url()).searchParams.get("category")).toBe("battery");
-    await expect.poll(() => new URL(page.url()).searchParams.get("point")).toBe("seed-1");
+    await expect.poll(() => new URL(page.url()).searchParams.get("point")).toBe("00000000-0000-4000-8000-000000000001");
     await expect.poll(() => new URL(page.url()).searchParams.get("sheet")).toBe("full");
 
     await page.getByPlaceholder("주소 또는 장소명으로 검색").fill("마포");
@@ -22,7 +22,7 @@ test.describe("local UI e2e", () => {
     await expect.poll(() => new URL(page.url()).searchParams.get("point")).toBe(null);
     await expect.poll(() => new URL(page.url()).searchParams.get("sheet")).toBe(null);
 
-    await page.goto("/?point=seed-1&sheet=full");
+    await page.goto("/?point=00000000-0000-4000-8000-000000000001&sheet=full");
     await page.locator("body").click({ position: { x: 20, y: 20 } });
     await page.keyboard.press("[");
     await expect.poll(() => new URL(page.url()).searchParams.get("sheet")).toBe(null);
@@ -38,24 +38,24 @@ test.describe("local UI e2e", () => {
     await page.getByRole("button", { name: "닫기" }).first().click();
     await expect.poll(() => new URL(page.url()).searchParams.get("reports")).toBe(null);
 
-    await page.goto("/?point=seed-1&sheet=full&reports=1");
+    await page.goto("/?point=00000000-0000-4000-8000-000000000001&sheet=full&reports=1");
     await expect(page.getByRole("heading", { name: "내 제보 관리" })).toBeVisible();
     await expect.poll(() => new URL(page.url()).searchParams.get("reports")).toBe("1");
     await expect.poll(() => new URL(page.url()).searchParams.get("point")).toBe(null);
     await expect.poll(() => new URL(page.url()).searchParams.get("sheet")).toBe(null);
 
-    await page.goto("/?point=seed-1");
-    await expect.poll(() => new URL(page.url()).searchParams.get("point")).toBe("seed-1");
+    await page.goto("/?point=00000000-0000-4000-8000-000000000001");
+    await expect.poll(() => new URL(page.url()).searchParams.get("point")).toBe("00000000-0000-4000-8000-000000000001");
     await page.getByRole("button", { name: "내 제보" }).first().click();
     await expect.poll(() => new URL(page.url()).searchParams.get("reports")).toBe("1");
     await expect.poll(() => new URL(page.url()).searchParams.get("point")).toBe(null);
     await page.goBack();
     await expect.poll(() => new URL(page.url()).searchParams.get("reports")).toBe(null);
-    await expect.poll(() => new URL(page.url()).searchParams.get("point")).toBe("seed-1");
+    await expect.poll(() => new URL(page.url()).searchParams.get("point")).toBe("00000000-0000-4000-8000-000000000001");
 
     await page.goto("/");
     await page.getByRole("button", { name: "시청역 폐건전지 수거함" }).first().click();
-    await expect.poll(() => new URL(page.url()).searchParams.get("point")).toBe("seed-1");
+    await expect.poll(() => new URL(page.url()).searchParams.get("point")).toBe("00000000-0000-4000-8000-000000000001");
   });
 
   test("map click registration to detail review/report flow", async ({ page }) => {
@@ -120,7 +120,7 @@ test.describe("local UI e2e", () => {
   });
 
   test("community verification vote updates trust state", async ({ page }) => {
-    await page.goto("/?point=seed-2&sheet=full");
+    await page.goto("/?point=00000000-0000-4000-8000-000000000002&sheet=full");
 
     const detailSheet = page.locator('aside[aria-label="포인트 상세 시트"]');
     await expect(detailSheet.getByText("확인 중", { exact: true }).first()).toBeVisible();
@@ -128,7 +128,7 @@ test.describe("local UI e2e", () => {
     const accurateVote = detailSheet.getByRole("button", { name: "정확해요" });
     const voteResponse = page.waitForResponse(
       (response) =>
-        response.url().includes("/api/points/seed-2/votes") &&
+        response.url().includes("/api/points/00000000-0000-4000-8000-000000000002/votes") &&
         response.request().method() === "POST",
     );
     await accurateVote.click();
@@ -150,7 +150,7 @@ test.describe("local UI e2e", () => {
 
     await page.getByRole("button", { name: "시청역 폐건전지 수거함" }).first().click();
     await expect(page.getByRole("complementary", { name: "모바일 메뉴" })).toHaveCount(0);
-    await expect.poll(() => new URL(page.url()).searchParams.get("point")).toBe("seed-1");
+    await expect.poll(() => new URL(page.url()).searchParams.get("point")).toBe("00000000-0000-4000-8000-000000000001");
 
     await expect(page.locator('aside[aria-label="포인트 상세 시트"]')).toBeVisible();
 

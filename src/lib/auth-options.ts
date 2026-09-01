@@ -1,5 +1,9 @@
 import { findTestAccountById } from "@/constants/test-accounts";
 import { isAdminUserId } from "@/lib/request-user";
+import { buildStableUserId } from "@/lib/auth-identity";
+import { consumeRateLimit } from "@/lib/rate-limit";
+import { recordSecurityAuditEvent } from "@/lib/security-audit";
+import { migrateLegacyUserIdentity } from "@/lib/user-identity-migration";
 import { timingSafeEqual } from "node:crypto";
 import type { NextAuthOptions } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
@@ -9,10 +13,21 @@ import Naver from "next-auth/providers/naver";
 
 const IS_PRODUCTION = process.env.NODE_ENV === "production";
 const TEST_ACCOUNT_LOGIN_ENABLED =
-  process.env.ENABLE_TEST_ACCOUNTS === "true" || !IS_PRODUCTION;
+  !IS_PRODUCTION && process.env.ENABLE_TEST_ACCOUNTS !== "false";
 
 const TEST_ACCOUNT_PASSWORD =
   process.env.TEST_ACCOUNT_PASSWORD ?? (IS_PRODUCTION ? "" : "recycle-map-local");
+
+function stableUserIdFor(
+  userId: string,
+  account: { provider: string; providerAccountId: string } | null,
+) {
+  return buildStableUserId(
+    account?.provider ?? "credentials",
+    account?.providerAccountId ?? userId,
+    userId,
+  );
+}
 
 function isSameSecret(input: string, expected: string) {
   const inputBuffer = Buffer.from(input);
@@ -33,16 +48,25 @@ const providers = [
       passcode: { label: "패스코드", type: "password" },
       nickname: { label: "닉네임(개발용)", type: "text" },
     },
-    authorize(credentials) {
+    async authorize(credentials) {
       const rawAccountId = credentials?.accountId;
       const rawPasscode = credentials?.passcode;
       const accountId =
         typeof rawAccountId === "string" ? rawAccountId.trim() : "";
       const passcode =
-        typeof rawPasscode === "string" ? rawPasscode.trim() : "";
+        typeof rawPasscode === "string" ? rawPasscode : "";
 
       if (accountId && passcode) {
         if (!TEST_ACCOUNT_LOGIN_ENABLED || !TEST_ACCOUNT_PASSWORD) {
+          return null;
+        }
+
+        const rateLimit = await consumeRateLimit({
+          key: `auth:credentials:${accountId}`,
+          windowMs: 15 * 60_000,
+          max: 10,
+        });
+        if (!rateLimit.allowed) {
           return null;
         }
 
@@ -101,16 +125,33 @@ const providers = [
 
 export const authOptions: NextAuthOptions = {
   providers,
+  useSecureCookies: IS_PRODUCTION,
   pages: {
     signIn: "/login",
   },
   session: {
     strategy: "jwt",
+    maxAge: 8 * 60 * 60,
+  },
+  jwt: {
+    maxAge: 8 * 60 * 60,
   },
   callbacks: {
-    async jwt({ token, user }) {
+    async signIn({ user, account }) {
+      if (!user.id) {
+        return false;
+      }
+      const stableUserId = stableUserIdFor(user.id, account);
+      await migrateLegacyUserIdentity(
+        account?.provider ?? "credentials",
+        user.id,
+        stableUserId,
+      );
+      return true;
+    },
+    async jwt({ token, user, account }) {
       if (user?.id) {
-        token.userId = user.id;
+        token.userId = stableUserIdFor(user.id, account);
       }
 
       return token;
@@ -128,6 +169,19 @@ export const authOptions: NextAuthOptions = {
       }
 
       return session;
+    },
+  },
+  events: {
+    async signIn({ user, account }) {
+      const provider = account?.provider ?? "credentials";
+      const stableUserId = user.id ? stableUserIdFor(user.id, account) : null;
+
+      await recordSecurityAuditEvent({
+        actorId: stableUserId,
+        action: "auth.sign_in",
+        outcome: "success",
+        details: { provider },
+      });
     },
   },
 };

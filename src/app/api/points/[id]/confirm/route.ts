@@ -5,6 +5,8 @@ import { resolveClientAddress, isSameOriginRequest } from "@/lib/request-securit
 import { repository } from "@/lib/data-repository";
 import { isAdminUserId, resolveRequestUserId } from "@/lib/request-user";
 import { adminVerificationDecisionSchema } from "@/lib/validators";
+import { isUuidParam } from "@/lib/route-params";
+import { recordSecurityAuditEvent } from "@/lib/security-audit";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(
@@ -24,6 +26,9 @@ export async function POST(
   }
 
   const { id } = await context.params;
+  if (!isUuidParam(id)) {
+    return NextResponse.json({ message: "잘못된 포인트 식별자입니다." }, { status: 400 });
+  }
   const point = await repository.getPoint(id);
   if (!point) {
     return NextResponse.json({ message: "포인트를 찾을 수 없습니다." }, { status: 404 });
@@ -34,7 +39,7 @@ export async function POST(
   }
 
   const clientAddress = resolveClientAddress(request);
-  const rateLimit = consumeRateLimit({
+  const rateLimit = await consumeRateLimit({
     key: `points:confirm:${userId}:${clientAddress}`,
     windowMs: 60_000,
     max: 20,
@@ -69,6 +74,15 @@ export async function POST(
   if (!updated) {
     return NextResponse.json({ message: "포인트를 찾을 수 없습니다." }, { status: 404 });
   }
+
+  await recordSecurityAuditEvent({
+    actorId: userId,
+    action: "point.verification_override",
+    targetType: "collection_point",
+    targetId: id,
+    outcome: "success",
+    details: { status: parsed.data.status },
+  });
 
   return NextResponse.json(updated, { status: 200 });
 }

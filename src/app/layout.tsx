@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Noto_Sans_KR, Noto_Serif_KR } from "next/font/google";
-import Script from "next/script";
+import { connection } from "next/server";
 import "./globals.css";
 import { Providers } from "./providers";
 
@@ -30,11 +30,15 @@ FORM: 시민 투표 집계표와 공공 데이터 원장, 자체 후보 7번, se
 FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance
 -->`;
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // A per-request CSP nonce requires request-time rendering so Next.js can
+  // attach the nonce to every framework and application script.
+  await connection();
+
   return (
     <html lang="ko">
       <body className={`${notoSans.variable} ${notoSerif.variable} antialiased`}>
@@ -44,10 +48,6 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: directionContract }}
         />
         <Providers>{children}</Providers>
-        <Script
-          src="https://t1.kakaocdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"
-          strategy="lazyOnload"
-        />
       </body>
     </html>
   );

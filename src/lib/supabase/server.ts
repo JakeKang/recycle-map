@@ -2,33 +2,36 @@ import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
 function getSupabaseEnv() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   return {
     url,
-    anonKey,
     serviceRoleKey,
   };
 }
 
 export function isSupabaseConfigured() {
-  const { url, anonKey } = getSupabaseEnv();
-  return Boolean(url && anonKey);
+  const { url, serviceRoleKey } = getSupabaseEnv();
+  return Boolean(url && serviceRoleKey);
 }
 
 export function createSupabaseServerClient(): SupabaseClient | null {
   if (process.env.FORCE_LOCAL_STORE === "true") {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("FORCE_LOCAL_STORE cannot be enabled in production");
+    }
     return null;
   }
 
-  const { url, anonKey, serviceRoleKey } = getSupabaseEnv();
-  const serverKey = serviceRoleKey || anonKey;
-  if (!url || !serverKey) {
+  const { url, serviceRoleKey } = getSupabaseEnv();
+  if (process.env.NODE_ENV === "production" && !serviceRoleKey) {
+    throw new Error("SUPABASE_SERVICE_ROLE_KEY is required in production");
+  }
+  if (!url || !serviceRoleKey) {
     return null;
   }
 
-  return createClient(url, serverKey, {
+  return createClient(url, serviceRoleKey, {
     auth: {
       persistSession: false,
       autoRefreshToken: false,

@@ -27,6 +27,11 @@ const verificationVotesFilePath = path.resolve(
   "supabase/migrations/20260831090000_point_verification_votes.sql",
 );
 
+const securityHardeningFilePath = path.resolve(
+  process.cwd(),
+  "supabase/migrations/20260901090000_security_hardening.sql",
+);
+
 describe("supabase schema contract", () => {
   it("contains core tables and triggers for points/reviews/reports", async () => {
     const sql = await readFile(schemaFilePath, "utf-8");
@@ -71,5 +76,21 @@ describe("supabase schema contract", () => {
     expect(sql).toContain("accurate_count >= 5");
     expect(sql).toContain("trigger_sync_point_verification_state");
     expect(sql).toContain("verification_votes_insert_own");
+  });
+
+  it("removes public test policies and adds production persistence constraints", async () => {
+    const sql = await readFile(securityHardeningFilePath, "utf-8");
+
+    expect(sql).toContain("revoke all on table public.profiles from anon, authenticated");
+    expect(sql).toContain("drop policy if exists points_insert_test_accounts");
+    expect(sql).toContain("add column if not exists photo_ids uuid[]");
+    expect(sql).toContain("trigger_enforce_single_report_per_user");
+    expect(sql).toContain("trigger_enforce_single_suggestion_per_user");
+    expect(sql).toContain("create_collection_point_with_photos");
+    expect(sql).toContain("migrate_legacy_user_identity");
+    expect(sql).toContain("create table if not exists public.legacy_user_identity_mappings");
+    expect(sql).toContain("create table if not exists public.point_suggestions");
+    expect(sql).toContain("create table if not exists public.security_rate_limits");
+    expect(sql).toContain("create table if not exists public.security_audit_events");
   });
 });

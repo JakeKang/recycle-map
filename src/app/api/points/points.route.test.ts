@@ -32,6 +32,14 @@ describe("points route", () => {
     expect(data.every((item) => item.category === "battery")).toBe(true);
   });
 
+  it("GET /api/points rejects unsupported query values", async () => {
+    const response = await getPoints(
+      new NextRequest("http://localhost/api/points?category=invalid&status=deleted"),
+    );
+
+    expect(response.status).toBe(400);
+  });
+
   it("GET /api/points?mine=1 enforces auth and returns user points", async () => {
     resolveRequestUserIdMock.mockResolvedValueOnce(null);
     const unauth = await getPoints(new NextRequest("http://localhost/api/points?mine=1"));
@@ -89,6 +97,21 @@ describe("points route", () => {
       }),
     );
     expect(spam.status).toBe(400);
+  });
+
+  it("rejects photo ids that are not ready and owned by the author", async () => {
+    resolveRequestUserIdMock.mockResolvedValueOnce("tester");
+    const response = await postPoint(
+      jsonRequest("http://localhost/api/points", "POST", {
+        title: "사진 소유권 검사",
+        category: "battery",
+        lat: 35.1,
+        lng: 128.1,
+        photoIds: ["b1570f7a-4192-4c0d-8265-b4d1300a58ac"],
+      }),
+    );
+
+    expect(response.status).toBe(400);
   });
 
   it("POST /api/points enforces duplicate radius and daily limit", async () => {

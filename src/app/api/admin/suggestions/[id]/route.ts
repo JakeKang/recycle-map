@@ -5,6 +5,8 @@ import { consumeRateLimit } from "@/lib/rate-limit";
 import { isSameOriginRequest, resolveClientAddress } from "@/lib/request-security";
 import { isAdminUserId, resolveRequestUserId } from "@/lib/request-user";
 import { adminSuggestionDecisionSchema } from "@/lib/validators";
+import { isUuidParam } from "@/lib/route-params";
+import { recordSecurityAuditEvent } from "@/lib/security-audit";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function PATCH(
@@ -24,7 +26,7 @@ export async function PATCH(
   }
 
   const clientAddress = resolveClientAddress(request);
-  const rateLimit = consumeRateLimit({
+  const rateLimit = await consumeRateLimit({
     key: `admin:suggestions:patch:${userId}:${clientAddress}`,
     windowMs: 60_000,
     max: 60,
@@ -50,6 +52,9 @@ export async function PATCH(
   }
 
   const { id } = await context.params;
+  if (!isUuidParam(id)) {
+    return NextResponse.json({ message: "잘못된 제안 식별자입니다." }, { status: 400 });
+  }
   const allSuggestions = await repository.listAllSuggestions();
   const target = allSuggestions.find((item) => item.id === id);
   if (!target) {
@@ -68,6 +73,15 @@ export async function PATCH(
   if (!updated) {
     return NextResponse.json({ message: "수정 제안을 찾을 수 없습니다." }, { status: 404 });
   }
+
+  await recordSecurityAuditEvent({
+    actorId: userId,
+    action: "suggestion.moderate",
+    targetType: "point_suggestion",
+    targetId: id,
+    outcome: "success",
+    details: { status: parsed.data.status },
+  });
 
   return NextResponse.json(updated);
 }

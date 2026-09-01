@@ -11,18 +11,39 @@ jobs:
   quality-security:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: recycle_map_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d recycle_map_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Secret scan
+        uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
         with:
           version: 10.14.0
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 20
           cache: pnpm
@@ -35,8 +56,9 @@ jobs:
           cat > .env.development <<'EOF'
           NEXTAUTH_URL=http://localhost:3100
           NEXTAUTH_SECRET=ci-development-secret-value-with-32chars-minimum
-          NEXT_PUBLIC_SUPABASE_URL=https://wrdmlvcyuaghogmhpeee.supabase.co
-          NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_zFB1lttvGSfTgYUAFzg0NQ_auZ_efCq
+          NEXT_PUBLIC_SUPABASE_URL=https://ci-project.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY=ci-public-anon-key
+          SUPABASE_SERVICE_ROLE_KEY=ci-development-service-role-key-32-characters
           ALLOW_DEV_USER_HEADER=true
           ALLOW_DB_FALLBACK_ON_ERROR=true
           FORCE_LOCAL_STORE=true
@@ -45,22 +67,36 @@ jobs:
           cat > .env.production <<'EOF'
           NEXTAUTH_URL=https://ci.recyclemap.app
           NEXTAUTH_SECRET=ci-production-secret-value-with-32chars-minimum-2026
-          NEXT_PUBLIC_SUPABASE_URL=https://wrdmlvcyuaghogmhpeee.supabase.co
-          NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_zFB1lttvGSfTgYUAFzg0NQ_auZ_efCq
+          NEXT_PUBLIC_SUPABASE_URL=https://ci-project.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY=ci-public-anon-key
+          SUPABASE_SERVICE_ROLE_KEY=ci-production-service-role-key-32-characters
+          ADMIN_USER_IDS=google:ci-security-admin
+          DATA_ENCRYPTION_KEYS=v1:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+          UPLOAD_STORAGE_MODE=supabase
+          NEXT_PUBLIC_UPLOAD_STORAGE_MODE=supabase
+          TRUST_PROXY=true
           ALLOW_DEV_USER_HEADER=false
           ALLOW_DB_FALLBACK_ON_ERROR=false
           FORCE_LOCAL_STORE=false
           ENABLE_TEST_ACCOUNTS=false
           EOF
 
-      - name: Predeploy check (development)
-        run: pnpm predeploy:check
+      - name: Predeploy check (development and production)
+        run: pnpm predeploy:check:full
 
       - name: Lint
         run: pnpm lint
 
       - name: Unit and integration tests
         run: pnpm test
+
+      - name: Apply migrations and verify database security
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/recycle_map_test
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes postgresql-client
+          pnpm test:db-security
 
       - name: Build
         run: pnpm build

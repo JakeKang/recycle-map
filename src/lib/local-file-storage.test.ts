@@ -6,6 +6,7 @@ import {
   LocalStorageError,
   MAX_UPLOAD_BYTES,
   getLocalUploadedFileMeta,
+  attachLocalUploadedFiles,
   readLocalUploadedFile,
   saveLocalUploadedFile,
 } from "@/lib/local-file-storage";
@@ -16,7 +17,10 @@ describe("local-file-storage", () => {
   const pngBytes = new Uint8Array([
     0x89, 0x50, 0x4e, 0x47,
     0x0d, 0x0a, 0x1a, 0x0a,
-    0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x0d,
+    0x49, 0x48, 0x44, 0x52,
+    0x00, 0x00, 0x00, 0x01,
+    0x00, 0x00, 0x00, 0x01,
   ]);
 
   beforeEach(async () => {
@@ -64,6 +68,29 @@ describe("local-file-storage", () => {
     } satisfies Partial<LocalStorageError>);
   });
 
+  it("rejects images with unsafe pixel dimensions", async () => {
+    const oversizedPng = new Uint8Array(pngBytes);
+    oversizedPng.set([0x00, 0x00, 0x27, 0x10], 16);
+    oversizedPng.set([0x00, 0x00, 0x27, 0x10], 20);
+    const file = new File([oversizedPng], "huge.png", { type: "image/png" });
+
+    await expect(saveLocalUploadedFile(file, "tester-2")).rejects.toMatchObject({
+      status: 400,
+    } satisfies Partial<LocalStorageError>);
+  });
+
+  it("rejects embedded EXIF metadata", async () => {
+    const pngWithExif = new Uint8Array(45);
+    pngWithExif.set(pngBytes);
+    pngWithExif.set([0x00, 0x00, 0x00, 0x00], 33);
+    pngWithExif.set([0x65, 0x58, 0x49, 0x66], 37);
+    const file = new File([pngWithExif], "location.png", { type: "image/png" });
+
+    await expect(saveLocalUploadedFile(file, "tester-2")).rejects.toMatchObject({
+      status: 400,
+    } satisfies Partial<LocalStorageError>);
+  });
+
   it("rejects files over max size", async () => {
     const oversized = new Uint8Array(MAX_UPLOAD_BYTES + 1);
     const file = new File([oversized], "big.png", { type: "image/png" });
@@ -77,5 +104,39 @@ describe("local-file-storage", () => {
     await expect(getLocalUploadedFileMeta("../../etc/passwd")).rejects.toMatchObject({
       status: 400,
     } satisfies Partial<LocalStorageError>);
+  });
+
+  it("allows a ready image to be attached only once", async () => {
+    const file = new File([pngBytes], "single-use.png", { type: "image/png" });
+    const saved = await saveLocalUploadedFile(file, "photo-owner");
+
+    await attachLocalUploadedFiles(
+      [saved.id],
+      "photo-owner",
+      "30000000-0000-4000-8000-000000000001",
+    );
+
+    await expect(
+      attachLocalUploadedFiles(
+        [saved.id],
+        "photo-owner",
+        "30000000-0000-4000-8000-000000000002",
+      ),
+    ).rejects.toMatchObject({ status: 400 } satisfies Partial<LocalStorageError>);
+  });
+
+  it("validates the whole attachment set before changing metadata", async () => {
+    const file = new File([pngBytes], "rollback.png", { type: "image/png" });
+    const saved = await saveLocalUploadedFile(file, "photo-owner");
+
+    await expect(
+      attachLocalUploadedFiles(
+        [saved.id, "30000000-0000-4000-8000-000000000099"],
+        "photo-owner",
+        "30000000-0000-4000-8000-000000000003",
+      ),
+    ).rejects.toMatchObject({ status: 400 } satisfies Partial<LocalStorageError>);
+
+    expect(await getLocalUploadedFileMeta(saved.id)).toMatchObject({ status: "ready" });
   });
 });

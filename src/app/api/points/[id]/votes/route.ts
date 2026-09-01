@@ -6,6 +6,7 @@ import { consumeRateLimit } from "@/lib/rate-limit";
 import { resolveRequestUserId } from "@/lib/request-user";
 import { resolveClientAddress, isSameOriginRequest } from "@/lib/request-security";
 import { verificationVoteSchema } from "@/lib/validators";
+import { isUuidParam } from "@/lib/route-params";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(
@@ -18,6 +19,9 @@ export async function GET(
   }
 
   const { id } = await context.params;
+  if (!isUuidParam(id)) {
+    return NextResponse.json({ message: "잘못된 포인트 식별자입니다." }, { status: 400 });
+  }
   const vote = await repository.getVerificationVote(id, userId);
   return NextResponse.json({ vote: vote?.value ?? null });
 }
@@ -36,6 +40,9 @@ export async function POST(
   }
 
   const { id } = await context.params;
+  if (!isUuidParam(id)) {
+    return NextResponse.json({ message: "잘못된 포인트 식별자입니다." }, { status: 400 });
+  }
   const point = await repository.getPoint(id);
   if (!point) {
     return NextResponse.json({ message: "포인트를 찾을 수 없습니다." }, { status: 404 });
@@ -47,7 +54,7 @@ export async function POST(
     );
   }
 
-  const rateLimit = consumeRateLimit({
+  const rateLimit = await consumeRateLimit({
     key: `points:verification-vote:${userId}:${resolveClientAddress(request)}`,
     windowMs: 60_000,
     max: 30,

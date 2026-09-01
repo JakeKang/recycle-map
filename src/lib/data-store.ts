@@ -11,6 +11,8 @@ import { Review } from "@/types/review";
 import { PointSuggestion } from "@/types/suggestion";
 
 const now = () => new Date().toISOString();
+const SEED_POINT_1_ID = "00000000-0000-4000-8000-000000000001";
+const SEED_POINT_2_ID = "00000000-0000-4000-8000-000000000002";
 
 function parsePositiveIntEnv(rawValue: string | undefined, fallback: number) {
   if (!rawValue) {
@@ -49,7 +51,7 @@ function parseRatioEnv(rawValue: string | undefined, fallback: number) {
 function createSeedPoints(): CollectionPoint[] {
   const base: CollectionPoint[] = [
     {
-      id: "seed-1",
+      id: SEED_POINT_1_ID,
       userId: "demo-user",
       title: "시청역 폐건전지 수거함",
       category: "battery",
@@ -71,7 +73,7 @@ function createSeedPoints(): CollectionPoint[] {
       updatedAt: now(),
     },
     {
-      id: "seed-2",
+      id: SEED_POINT_2_ID,
       userId: "demo-user",
       title: "마포구청 폐소형가전함",
       category: "electronics",
@@ -120,7 +122,7 @@ function createSeedPoints(): CollectionPoint[] {
     const reviewCount = index % 6;
 
     synthetic.push({
-      id: `perf-${index + 1}`,
+      id: `10000000-0000-4000-8000-${(index + 1).toString(16).padStart(12, "0")}`,
       userId: `perf-user-${(index % 25) + 1}`,
       title: `성능 더미 수거함 ${index + 1}`,
       category,
@@ -150,7 +152,7 @@ function createSeedReviews(): Review[] {
   return [
     {
       id: "r-seed-1",
-      pointId: "seed-1",
+      pointId: SEED_POINT_1_ID,
       userId: "demo-user",
       rating: 5,
       comment: "접근이 쉬웠어요",
@@ -158,7 +160,7 @@ function createSeedReviews(): Review[] {
     },
     {
       id: "r-seed-2",
-      pointId: "seed-1",
+      pointId: SEED_POINT_1_ID,
       userId: "demo-user-2",
       rating: 4,
       comment: "안내표시가 명확해요",
@@ -191,7 +193,7 @@ function verificationVotesForSeeds(): VerificationVote[] {
   return [
     ...Array.from({ length: 7 }, (_, index) => ({
       id: `v-seed-1-${index + 1}`,
-      pointId: "seed-1",
+      pointId: SEED_POINT_1_ID,
       userId: `seed-verifier-${index + 1}`,
       value: "accurate" as const,
       createdAt: now(),
@@ -199,7 +201,7 @@ function verificationVotesForSeeds(): VerificationVote[] {
     })),
     {
       id: "v-seed-1-inaccurate",
-      pointId: "seed-1",
+      pointId: SEED_POINT_1_ID,
       userId: "seed-verifier-8",
       value: "inaccurate",
       createdAt: now(),
@@ -207,7 +209,7 @@ function verificationVotesForSeeds(): VerificationVote[] {
     },
     ...Array.from({ length: 2 }, (_, index) => ({
       id: `v-seed-2-${index + 1}`,
-      pointId: "seed-2",
+      pointId: SEED_POINT_2_ID,
       userId: `seed-verifier-${index + 9}`,
       value: "accurate" as const,
       createdAt: now(),
@@ -335,6 +337,13 @@ export const store = {
     return created;
   },
 
+  removePointAfterFailedCreate(id: string, userId: string) {
+    const index = points.findIndex((point) => point.id === id && point.userId === userId);
+    if (index >= 0) {
+      points.splice(index, 1);
+    }
+  },
+
   patchPoint(id: string, patch: Partial<CollectionPoint>) {
     const idx = points.findIndex((point) => point.id === id);
     if (idx < 0) {
@@ -452,6 +461,13 @@ export const store = {
   },
 
   createReport(input: Omit<Report, "id" | "createdAt" | "status">) {
+    const existing = reports.find(
+      (report) => report.pointId === input.pointId && report.userId === input.userId,
+    );
+    if (existing) {
+      return null;
+    }
+
     const created: Report = {
       ...input,
       id: crypto.randomUUID(),
@@ -498,6 +514,14 @@ export const store = {
   },
 
   createSuggestion(input: Omit<PointSuggestion, "id" | "createdAt" | "status">) {
+    const existing = suggestions.find(
+      (suggestion) =>
+        suggestion.pointId === input.pointId && suggestion.userId === input.userId,
+    );
+    if (existing) {
+      return null;
+    }
+
     const created: PointSuggestion = {
       ...input,
       id: crypto.randomUUID(),

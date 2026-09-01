@@ -5,7 +5,21 @@ import { signIn, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
-export default function LoginClient({ callbackUrl }: { callbackUrl: string }) {
+const SOCIAL_PROVIDER_LABELS: Record<string, string> = {
+  google: "Google",
+  kakao: "Kakao",
+  naver: "Naver",
+};
+
+export default function LoginClient({
+  callbackUrl,
+  showDevelopmentLogin,
+  socialProviders,
+}: {
+  callbackUrl: string;
+  showDevelopmentLogin: boolean;
+  socialProviders: string[];
+}) {
   const router = useRouter();
   const { data } = useSession();
 
@@ -101,7 +115,25 @@ export default function LoginClient({ callbackUrl }: { callbackUrl: string }) {
         </p>
       </header>
 
-      <section className="border-y border-stone-300 py-6">
+      {socialProviders.length > 0 ? (
+        <section className="border-y border-stone-300 py-6">
+          <h2 className="font-ledger text-xl font-bold text-[var(--ink)]">소셜 로그인</h2>
+          <div className="mt-4 grid gap-2 sm:grid-cols-3">
+            {socialProviders.map((provider) => (
+              <button
+                key={provider}
+                type="button"
+                onClick={() => signIn(provider, { callbackUrl })}
+                className="border border-stone-300 px-3 py-2 text-sm font-semibold text-stone-700"
+              >
+                {SOCIAL_PROVIDER_LABELS[provider] ?? provider}로 로그인
+              </button>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {showDevelopmentLogin ? <section className="border-y border-stone-300 py-6">
         <h2 className="font-ledger text-xl font-bold text-[var(--ink)]">테스트 계정</h2>
         <p className="mt-1 text-sm text-stone-600">역할별 제보·검증·신고 흐름을 확인합니다.</p>
 
@@ -145,9 +177,9 @@ export default function LoginClient({ callbackUrl }: { callbackUrl: string }) {
             {isLoading ? "로그인 중..." : "테스트 계정으로 로그인"}
           </button>
         </form>
-      </section>
+      </section> : null}
 
-      <section className="border-b border-stone-300 py-6">
+      {showDevelopmentLogin ? <section className="border-b border-stone-300 py-6">
         <h2 className="font-ledger text-lg font-bold text-[var(--ink)]">개발 전용 닉네임 로그인</h2>
         <p className="mt-1 text-xs text-stone-500">
           production 환경에서는 비활성화됩니다.
@@ -167,7 +199,7 @@ export default function LoginClient({ callbackUrl }: { callbackUrl: string }) {
             닉네임으로 로그인
           </button>
         </div>
-      </section>
+      </section> : null}
     </main>
   );
 }

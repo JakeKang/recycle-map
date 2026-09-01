@@ -165,7 +165,10 @@ begin
 
   update public.collection_points
   set report_count = pending_count,
-      status = case when pending_count >= 5 then 'reported' else 'active' end,
+      status = case
+        when pending_count >= 5 then 'reported'::point_status
+        else 'active'::point_status
+      end,
       updated_at = now()
   where id = target_point_id;
 

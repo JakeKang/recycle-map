@@ -1,7 +1,9 @@
 "use client";
 
 import AddressSearch from "@/components/point/AddressSearch";
-import { buildClientHeaders } from "@/lib/client-dev-user";
+import { optimizeImageForUpload } from "@/lib/client-image-optimizer";
+import { uploadPointPhoto } from "@/lib/client-image-upload";
+import { validateImageUploadBatch } from "@/lib/image-upload-policy";
 import { useCreatePoint } from "@/hooks/usePoints";
 import { CATEGORIES, PointCategory } from "@/types/point";
 import { ImagePlus, X } from "lucide-react";
@@ -49,50 +51,24 @@ export default function PointForm({ position, onSuccess }: PointFormProps) {
 
     try {
       const selected = files.slice(0, remaining);
-      const uploaded = await Promise.all(
-        selected.map(async (file) => {
-          const formData = new FormData();
-          formData.append("file", file);
-
-          const response = await fetch("/api/upload", {
-            method: "POST",
-            headers: buildClientHeaders(),
-            body: formData,
-          });
-
-          if (!response.ok) {
-            let payload: unknown = null;
-            try {
-              payload = await response.json();
-            } catch {
-              payload = null;
-            }
-
-            if (
-              payload &&
-              typeof payload === "object" &&
-              "message" in payload &&
-              typeof payload.message === "string"
-            ) {
-              throw new Error(payload.message);
-            }
-
-            throw new Error("이미지 업로드에 실패했습니다.");
-          }
-
-          const payload = (await response.json()) as {
-            id: string;
-            readUrl: string;
-            name: string;
-          };
-
-          return {
-            id: payload.id,
-            readUrl: payload.readUrl,
-            name: payload.name,
-          };
-        }),
+      const sourcePolicy = validateImageUploadBatch(
+        selected.map((file) => ({ sourceBytes: file.size, storedBytes: 1 })),
       );
+      if (!sourcePolicy.ok) {
+        throw new Error(sourcePolicy.message);
+      }
+
+      const uploaded: Array<{ id: string; readUrl: string; name: string }> = [];
+      for (const sourceFile of selected) {
+        const file = await optimizeImageForUpload(sourceFile);
+        const optimizedPolicy = validateImageUploadBatch([
+          { sourceBytes: sourceFile.size, storedBytes: file.size },
+        ]);
+        if (!optimizedPolicy.ok) {
+          throw new Error(optimizedPolicy.message);
+        }
+        uploaded.push(await uploadPointPhoto(sourceFile, file));
+      }
 
       setUploadedPhotos((prev) => [...prev, ...uploaded]);
       event.target.value = "";

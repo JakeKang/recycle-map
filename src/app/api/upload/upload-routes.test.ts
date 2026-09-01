@@ -31,7 +31,10 @@ describe("upload api routes", () => {
   const pngBytes = new Uint8Array([
     0x89, 0x50, 0x4e, 0x47,
     0x0d, 0x0a, 0x1a, 0x0a,
-    0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x0d,
+    0x49, 0x48, 0x44, 0x52,
+    0x00, 0x00, 0x00, 0x01,
+    0x00, 0x00, 0x00, 0x01,
   ]);
 
   beforeEach(async () => {
@@ -58,6 +61,20 @@ describe("upload api routes", () => {
 
     const response = await uploadPost(request);
     expect(response.status).toBe(401);
+  });
+
+  it("rejects an oversized multipart request before parsing it", async () => {
+    resolveRequestUserIdMock.mockResolvedValue("owner-1");
+
+    const request = new NextRequest("http://localhost/api/upload", {
+      method: "POST",
+      headers: { "content-length": String(11 * 1024 * 1024) },
+      body: "oversized",
+    });
+
+    const response = await uploadPost(request);
+
+    expect(response.status).toBe(413);
   });
 
   it("uploads then allows owner read and download", async () => {

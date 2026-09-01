@@ -46,18 +46,22 @@ pnpm predeploy:check:full
 | --- | --- | --- |
 | 목록·상세 조회 실패 | 네트워크와 API 응답 상태 | 화면의 `다시 시도`, 반복 시 서버 로그와 Supabase 상태 확인 |
 | 지도만 비어 있음 | 타일 URL·저작권 문자열·네트워크 | 목록 기능을 유지한 채 타일 제공자 설정 복구 후 새로고침 |
-| 로그인 반복 실패 | 제공자 키, callback URL, 세션 쿠키 | 다른 브라우저에서 재현 후 NextAuth 서버 로그 확인 |
+| 로그인 반복 실패 | 제공자 키, callback URL, 세션 쿠키, legacy 승인 매핑·ID 충돌 | 다른 브라우저에서 재현 후 NextAuth 서버 로그와 `legacy_user_identity_mappings`, 기존/namespace 프로필 중복 확인 |
 | 등록이 409 | 같은 분류의 50m 내 기존 위치 | 기존 위치를 사용하거나 좌표·분류 오류를 바로잡기 |
 | 등록이 429 | 일일 5건 또는 분당 요청 제한 | 안내 시간만큼 기다리고 단일 요청으로 재시도 |
 | 투표 불가 | 로그인·작성자 본인 여부 | 다른 사용자 위치에서 시도, 세션 만료 시 재로그인 |
 | 저장 후 확인 중 | 위치 수정으로 검증 초기화됨 | 정상 동작이며 다시 시민 검증 진행 |
 | 운영 DB 쓰기 실패 | 서비스 역할 키와 마이그레이션 | `SUPABASE_SERVICE_ROLE_KEY`와 최신 SQL 적용 확인 |
-| 사진 업로드 실패 | 형식·크기·저장 디렉터리 권한 | JPEG/PNG/WebP 5MB 이하로 재선택, 서버 디렉터리 확인 |
+| 사진 업로드 실패 | 원본 50MB·합계 150MB 제한, 최적화, Storage 설정 | 이미지를 나눠 선택하고 Supabase private bucket·signed upload 설정 확인 |
+| Storage 사용량 지속 증가 | 만료 pending/rejected 업로드 정리 작업 | scheduler의 `pnpm security:cleanup-uploads` 실행 결과와 service-role 권한 확인 |
+| 암호화 데이터 조회 실패 | `DATA_ENCRYPTION_KEYS` 키 버전 | ciphertext에 표시된 이전 키 버전을 복구하고 키 링 앞에는 현재 활성 키 유지 |
 
 ## 복구 시 금지 사항
 
 - 운영에서 `ALLOW_DB_FALLBACK_ON_ERROR=true`로 오류를 숨기지 않습니다.
 - 브라우저에 `SUPABASE_SERVICE_ROLE_KEY`를 노출하지 않습니다.
+- 이전 ciphertext가 남아 있는 상태에서 `DATA_ENCRYPTION_KEYS`의 구버전 키를 제거하지 않습니다.
+- 키 회전은 백업 후 `pnpm security:reencrypt` dry-run과 `--apply` 실행, `pnpm security:verify-encryption` 성공 순서로 진행합니다.
 - 오류가 난 제출 버튼을 반복 클릭하지 않습니다.
 - 데이터 불일치를 확인하기 전에 관리자 상태를 임의로 덮어쓰지 않습니다.
 

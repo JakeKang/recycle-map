@@ -6,6 +6,7 @@ import { resolveClientAddress, isSameOriginRequest } from "@/lib/request-securit
 import { repository } from "@/lib/data-repository";
 import { resolveRequestUserId } from "@/lib/request-user";
 import { reviewSchema } from "@/lib/validators";
+import { isUuidParam } from "@/lib/route-params";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(
@@ -13,6 +14,9 @@ export async function GET(
   context: { params: Promise<{ id: string }> },
 ) {
   const { id } = await context.params;
+  if (!isUuidParam(id)) {
+    return NextResponse.json({ message: "잘못된 포인트 식별자입니다." }, { status: 400 });
+  }
   const rawPage = Number(request.nextUrl.searchParams.get("page") ?? "1");
   const rawLimit = Number(request.nextUrl.searchParams.get("limit") ?? "10");
   const page = Number.isInteger(rawPage) && rawPage > 0 ? rawPage : 1;
@@ -34,6 +38,9 @@ export async function POST(
   }
 
   const { id } = await context.params;
+  if (!isUuidParam(id)) {
+    return NextResponse.json({ message: "잘못된 포인트 식별자입니다." }, { status: 400 });
+  }
   const userId = await resolveRequestUserId(request);
   if (!userId) {
     return NextResponse.json(
@@ -48,7 +55,7 @@ export async function POST(
   }
 
   const clientAddress = resolveClientAddress(request);
-  const rateLimit = consumeRateLimit({
+  const rateLimit = await consumeRateLimit({
     key: `reviews:create:${userId}:${clientAddress}`,
     windowMs: 60_000,
     max: 20,

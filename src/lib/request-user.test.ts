@@ -15,6 +15,7 @@ describe("request-user", () => {
   beforeEach(() => {
     getCurrentUserIdMock.mockReset();
     process.env.ALLOW_DEV_USER_HEADER = "true";
+    delete process.env.ADMIN_USER_IDS;
   });
 
   it("returns session user id when available", async () => {
@@ -55,13 +56,32 @@ describe("request-user", () => {
     expect(userId).toBeNull();
   });
 
+  it("does not accept an unsigned dev identity on a non-localhost request", async () => {
+    delete process.env.DEV_USER_HEADER_SECRET;
+    getCurrentUserIdMock.mockResolvedValue(null);
+
+    const request = new NextRequest("http://devbox.local/api/points", {
+      headers: { "x-dev-user-id": "local-tester" },
+    });
+
+    expect(await resolveRequestUserId(request)).toBeNull();
+  });
+
   it("identifies default and configured admin user ids", () => {
-    delete process.env.ADMIN_USER_IDS;
     expect(isAdminUserId("test-admin")).toBe(true);
     expect(isAdminUserId("reviewer")).toBe(false);
 
     process.env.ADMIN_USER_IDS = "ops-admin,security-admin";
     expect(isAdminUserId("ops-admin")).toBe(true);
     expect(isAdminUserId("test-admin")).toBe(false);
+  });
+
+  it("fails closed when production admin ids are not configured", () => {
+    vi.stubEnv("NODE_ENV", "production");
+
+    expect(isAdminUserId("admin")).toBe(false);
+    expect(isAdminUserId("test-owner")).toBe(false);
+
+    vi.unstubAllEnvs();
   });
 });

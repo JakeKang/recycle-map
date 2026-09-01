@@ -4,6 +4,7 @@ import {
   readLocalUploadedFile,
 } from "@/lib/local-file-storage";
 import { resolveRequestUserId } from "@/lib/request-user";
+import { createSupabasePhotoReadUrl } from "@/lib/supabase-upload";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(
@@ -11,25 +12,28 @@ export async function GET(
   context: { params: Promise<{ id: string }> },
 ) {
   const userId = await resolveRequestUserId(request);
-  if (!userId) {
-    return NextResponse.json(
-      { message: "로그인이 필요한 기능입니다." },
-      { status: 401 },
-    );
-  }
-
   const { id } = await context.params;
 
   try {
+    if (process.env.UPLOAD_STORAGE_MODE === "supabase") {
+      const signedUrl = await createSupabasePhotoReadUrl(id, userId, false);
+      if (!signedUrl) {
+        return NextResponse.json({ message: "파일을 찾을 수 없습니다." }, { status: 404 });
+      }
+      const response = NextResponse.redirect(signedUrl, 307);
+      response.headers.set("Cache-Control", "private, no-store");
+      return response;
+    }
+
     const file = await readLocalUploadedFile(id);
     if (!file) {
       return NextResponse.json({ message: "파일을 찾을 수 없습니다." }, { status: 404 });
     }
 
-    if (file.meta.ownerId !== userId) {
+    if (file.meta.ownerId !== userId && file.meta.status !== "attached") {
       return NextResponse.json(
-        { message: "파일 접근 권한이 없습니다." },
-        { status: 403 },
+        { message: userId ? "파일 접근 권한이 없습니다." : "로그인이 필요한 기능입니다." },
+        { status: userId ? 403 : 401 },
       );
     }
 

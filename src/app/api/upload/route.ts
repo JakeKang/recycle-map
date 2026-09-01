@@ -5,11 +5,19 @@ import {
   saveLocalUploadedFile,
 } from "@/lib/local-file-storage";
 import { resolveRequestUserId } from "@/lib/request-user";
+import { MAX_STORED_IMAGE_BYTES } from "@/lib/image-upload-policy";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(request: NextRequest) {
   if (!isSameOriginRequest(request)) {
     return NextResponse.json({ message: "허용되지 않은 요청 origin입니다." }, { status: 403 });
+  }
+
+  if (process.env.NODE_ENV === "production") {
+    return NextResponse.json(
+      { message: "운영 환경에서는 직접 저장소 업로드를 사용해야 합니다." },
+      { status: 410 },
+    );
   }
 
   const userId = await resolveRequestUserId(request);
@@ -20,8 +28,19 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const declaredLength = Number(request.headers.get("content-length"));
+  if (
+    Number.isFinite(declaredLength) &&
+    declaredLength > MAX_STORED_IMAGE_BYTES + 512 * 1024
+  ) {
+    return NextResponse.json(
+      { message: "업로드 요청 본문이 너무 큽니다." },
+      { status: 413 },
+    );
+  }
+
   const clientAddress = resolveClientAddress(request);
-  const rateLimit = consumeRateLimit({
+  const rateLimit = await consumeRateLimit({
     key: `upload:create:${userId}:${clientAddress}`,
     windowMs: 60_000,
     max: 30,
@@ -36,7 +55,15 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const data = await request.formData();
+  let data: FormData;
+  try {
+    data = await request.formData();
+  } catch {
+    return NextResponse.json(
+      { message: "유효한 multipart/form-data 요청이 필요합니다." },
+      { status: 400 },
+    );
+  }
   const file = data.get("file");
   if (!(file instanceof File)) {
     return NextResponse.json({ message: "file 필드가 필요합니다." }, { status: 400 });

@@ -1,15 +1,16 @@
 import { getCurrentUserId } from "@/lib/current-user";
 import { NextRequest } from "next/server";
+import { timingSafeEqual } from "node:crypto";
 
 const DEV_HEADER_NAME = "x-dev-user-id";
 const DEV_HEADER_SECRET_NAME = "x-dev-user-secret";
 
-const DEFAULT_ADMIN_USER_IDS = new Set(["admin", "admin-user", "test-admin", "test-owner"]);
+const DEFAULT_ADMIN_USER_IDS = new Set(["admin", "admin-user", "test-admin"]);
 
 function configuredAdminUserIds() {
   const raw = process.env.ADMIN_USER_IDS;
   if (!raw) {
-    return DEFAULT_ADMIN_USER_IDS;
+    return process.env.NODE_ENV === "production" ? new Set<string>() : DEFAULT_ADMIN_USER_IDS;
   }
 
   const ids = raw
@@ -18,7 +19,7 @@ function configuredAdminUserIds() {
     .filter((value) => value.length > 0);
 
   if (ids.length === 0) {
-    return DEFAULT_ADMIN_USER_IDS;
+    return process.env.NODE_ENV === "production" ? new Set<string>() : DEFAULT_ADMIN_USER_IDS;
   }
 
   return new Set(ids);
@@ -28,6 +29,16 @@ function isDevHeaderEnabled() {
   return (
     process.env.NODE_ENV !== "production" &&
     process.env.ALLOW_DEV_USER_HEADER === "true"
+  );
+}
+
+function secretsMatch(provided: string | null, expected: string) {
+  if (!provided) return false;
+  const providedBuffer = Buffer.from(provided);
+  const expectedBuffer = Buffer.from(expected);
+  return (
+    providedBuffer.length === expectedBuffer.length &&
+    timingSafeEqual(providedBuffer, expectedBuffer)
   );
 }
 
@@ -46,9 +57,11 @@ export async function resolveRequestUserId(request: NextRequest) {
     const expectedSecret = process.env.DEV_USER_HEADER_SECRET;
     if (expectedSecret) {
       const providedSecret = request.headers.get(DEV_HEADER_SECRET_NAME);
-      if (providedSecret !== expectedSecret) {
+      if (!secretsMatch(providedSecret, expectedSecret)) {
         return null;
       }
+    } else if (!["localhost", "127.0.0.1", "::1"].includes(request.nextUrl.hostname)) {
+      return null;
     }
 
     const devUserId = request.headers.get(DEV_HEADER_NAME);

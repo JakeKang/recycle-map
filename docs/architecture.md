@@ -67,17 +67,22 @@ sequenceDiagram
 
 - 운영 요청은 NextAuth 세션의 사용자 ID를 사용합니다.
 - Google, Kakao, Naver는 각 클라이언트 환경 변수가 모두 있을 때만 로그인 선택지에 나타납니다.
-- 테스트 계정은 개발 환경에서 기본 활성화되며, 운영에서는 `ENABLE_TEST_ACCOUNTS=true`일 때만 활성화됩니다.
-- `ALLOW_DEV_USER_HEADER=true`인 비운영 환경에서만 개발 사용자 헤더를 허용합니다. `DEV_USER_HEADER_SECRET`을 설정하면 헤더 비밀값도 일치해야 합니다.
-- 관리자 ID는 `ADMIN_USER_IDS` 쉼표 목록으로 지정합니다. 미설정 시 코드의 개발 기본값만 사용합니다.
+- 테스트 계정은 개발 환경에서만 사용할 수 있으며 운영에서는 환경 변수와 관계없이 비활성화됩니다.
+- `ALLOW_DEV_USER_HEADER=true`인 비운영 환경에서만 개발 사용자 헤더를 허용합니다. 비밀값이 없으면 localhost 요청으로 제한합니다.
+- OAuth 사용자 ID는 `provider:providerAccountId`로 namespace를 분리합니다. 과거 raw ID는 운영자가 백업·인증 로그로 확인해 `legacy_user_identity_mappings`에 승인한 경우에만 첫 로그인에서 service-role 전용 원자 함수로 소유권을 옮기며, 미승인·충돌은 fail-closed 합니다.
+- 관리자 ID는 `ADMIN_USER_IDS` 쉼표 목록으로 지정하며 운영 미설정 시 관리자가 없는 fail-closed 상태가 됩니다.
 - 위치 수정은 작성자만, 검증 상태 수동 조정과 신고·수정 제안 처리는 관리자만 가능합니다.
 
 ## 데이터와 파일 저장
 
 - Supabase 마이그레이션은 `supabase/migrations`의 시간순 SQL 파일로 관리합니다.
-- 운영 서버 데이터 접근에는 `SUPABASE_SERVICE_ROLE_KEY`가 필요합니다. 이 값은 서버 전용이며 클라이언트 번들에 노출하면 안 됩니다.
+- 서버 데이터 접근에는 환경과 관계없이 `SUPABASE_SERVICE_ROLE_KEY`가 필요하며 anon 키 폴백은 금지됩니다. 브라우저 역할의 내부 테이블 권한은 hardening migration에서 회수하고, 로컬 메모리 모드는 `FORCE_LOCAL_STORE=true`로 명시합니다.
 - 로컬 업로드는 기본적으로 `data/uploads`와 `data/upload-meta`에 저장됩니다. `LOCAL_STORAGE_ROOT_DIR`로 루트를 바꿀 수 있습니다.
-- 업로드는 JPEG, PNG, WebP만 허용하며 최대 5MB입니다. 확장자가 아니라 파일 매직 바이트도 검사합니다.
+- 원본 사진은 파일당 50MB·회당 150MB까지 선택할 수 있고 브라우저가 3840px·10MB 이하 WebP로 재인코딩합니다. 운영에서는 private Supabase Storage signed upload를 사용하며 완료 시 서버가 파일 시그니처·해상도·메타데이터·SHA-256을 검증합니다.
+- 신고 사유, 수정 제안, 보안 감사 상세, 원본 사진 파일명은 `DATA_ENCRYPTION_KEYS`의 AES-256-GCM 키 링으로 인증 암호화합니다.
+- 사진 소유·준비 상태 확인, 위치 생성, 사진 공개 연결은 단일 PostgreSQL 함수의 행 잠금과 트랜잭션으로 처리합니다.
+- 운영 요청 제한과 일일 quota는 PostgreSQL의 원자 연산과 trigger로 강제합니다.
+- HTML 응답은 Next.js Proxy가 요청별 nonce를 생성해 `script-src`에서 `'unsafe-inline'` 없이 실행 스크립트를 제한합니다.
 - `ALLOW_DB_FALLBACK_ON_ERROR=true`는 저장소 오류를 메모리 데이터로 대체하므로 운영에서는 반드시 `false`여야 합니다.
 
 ## 운영 필수 환경 변수
@@ -90,6 +95,9 @@ sequenceDiagram
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase 공개 키 |
 | `SUPABASE_SERVICE_ROLE_KEY` | 서버 전용 DB 접근 키 |
 | `ADMIN_USER_IDS` | 관리자 사용자 ID 목록 |
+| `DATA_ENCRYPTION_KEYS` | 버전형 AES-256-GCM 키 링 |
+| `UPLOAD_STORAGE_MODE` / `NEXT_PUBLIC_UPLOAD_STORAGE_MODE` | 운영 private storage 모드 |
+| `TRUST_PROXY` | 전달 IP 헤더 신뢰 여부 |
 | `NEXT_PUBLIC_MAP_TILE_URL` | 선택적 Leaflet 타일 URL 템플릿 |
 | `NEXT_PUBLIC_MAP_TILE_ATTRIBUTION` | 선택적 타일 저작권 표시 |
 

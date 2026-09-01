@@ -2,13 +2,19 @@ import { randomUUID } from "node:crypto";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
+import {
+  MAX_IMAGE_EDGE,
+  MAX_IMAGE_PIXELS,
+  MAX_STORED_IMAGE_BYTES,
+} from "@/lib/image-upload-policy";
+
 export const ALLOWED_IMAGE_MIME_TYPES = [
   "image/jpeg",
   "image/png",
   "image/webp",
 ] as const;
 
-export const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
+export const MAX_UPLOAD_BYTES = MAX_STORED_IMAGE_BYTES;
 
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -18,6 +24,8 @@ const MIME_EXTENSION_MAP: Record<(typeof ALLOWED_IMAGE_MIME_TYPES)[number], stri
   "image/png": ".png",
   "image/webp": ".webp",
 };
+
+const attachingFileIds = new Set<string>();
 
 export class LocalStorageError extends Error {
   status: number;
@@ -37,6 +45,8 @@ export interface LocalStoredFileMeta {
   mimeType: (typeof ALLOWED_IMAGE_MIME_TYPES)[number];
   size: number;
   createdAt: string;
+  status?: "ready" | "attached";
+  pointId?: string;
 }
 
 function getStorageRootDir() {
@@ -145,6 +155,152 @@ function detectImageMimeType(
   return null;
 }
 
+function readJpegDimensions(fileBuffer: Buffer) {
+  let offset = 2;
+  while (offset + 8 < fileBuffer.length) {
+    if (fileBuffer[offset] !== 0xff) {
+      offset += 1;
+      continue;
+    }
+
+    const marker = fileBuffer[offset + 1];
+    const segmentLength = fileBuffer.readUInt16BE(offset + 2);
+    if (
+      [0xc0, 0xc1, 0xc2, 0xc3, 0xc5, 0xc6, 0xc7, 0xc9, 0xca, 0xcb, 0xcd, 0xce, 0xcf].includes(
+        marker,
+      ) &&
+      offset + 8 < fileBuffer.length
+    ) {
+      return {
+        height: fileBuffer.readUInt16BE(offset + 5),
+        width: fileBuffer.readUInt16BE(offset + 7),
+      };
+    }
+
+    if (segmentLength < 2) {
+      break;
+    }
+    offset += 2 + segmentLength;
+  }
+  return null;
+}
+
+function readWebpDimensions(fileBuffer: Buffer) {
+  const chunk = fileBuffer.toString("ascii", 12, 16);
+  if (chunk === "VP8X" && fileBuffer.length >= 30) {
+    return {
+      width: 1 + fileBuffer.readUIntLE(24, 3),
+      height: 1 + fileBuffer.readUIntLE(27, 3),
+    };
+  }
+  if (chunk === "VP8 " && fileBuffer.length >= 30) {
+    return {
+      width: fileBuffer.readUInt16LE(26) & 0x3fff,
+      height: fileBuffer.readUInt16LE(28) & 0x3fff,
+    };
+  }
+  if (chunk === "VP8L" && fileBuffer.length >= 25) {
+    const bits = fileBuffer.readUInt32LE(21);
+    return {
+      width: 1 + (bits & 0x3fff),
+      height: 1 + ((bits >> 14) & 0x3fff),
+    };
+  }
+  return null;
+}
+
+function readImageDimensions(
+  fileBuffer: Buffer,
+  mimeType: (typeof ALLOWED_IMAGE_MIME_TYPES)[number],
+) {
+  if (mimeType === "image/png" && fileBuffer.length >= 24) {
+    return {
+      width: fileBuffer.readUInt32BE(16),
+      height: fileBuffer.readUInt32BE(20),
+    };
+  }
+  if (mimeType === "image/jpeg") {
+    return readJpegDimensions(fileBuffer);
+  }
+  if (mimeType === "image/webp") {
+    return readWebpDimensions(fileBuffer);
+  }
+  return null;
+}
+
+function hasSensitiveMetadata(
+  fileBuffer: Buffer,
+  mimeType: (typeof ALLOWED_IMAGE_MIME_TYPES)[number],
+) {
+  if (mimeType === "image/jpeg") {
+    let offset = 2;
+    while (offset + 4 <= fileBuffer.length) {
+      if (fileBuffer[offset] !== 0xff) {
+        offset += 1;
+        continue;
+      }
+      const marker = fileBuffer[offset + 1];
+      if (marker === 0xe1 || marker === 0xed) return true;
+      const length = fileBuffer.readUInt16BE(offset + 2);
+      if (length < 2) break;
+      offset += length + 2;
+    }
+  }
+
+  if (mimeType === "image/png") {
+    let offset = 8;
+    while (offset + 12 <= fileBuffer.length) {
+      const length = fileBuffer.readUInt32BE(offset);
+      const type = fileBuffer.toString("ascii", offset + 4, offset + 8);
+      if (["eXIf", "tEXt", "zTXt", "iTXt"].includes(type)) return true;
+      const nextOffset = offset + 12 + length;
+      if (nextOffset <= offset || nextOffset > fileBuffer.length) break;
+      offset = nextOffset;
+    }
+  }
+
+  if (mimeType === "image/webp") {
+    let offset = 12;
+    while (offset + 8 <= fileBuffer.length) {
+      const type = fileBuffer.toString("ascii", offset, offset + 4);
+      const length = fileBuffer.readUInt32LE(offset + 4);
+      if (type === "EXIF" || type === "XMP ") return true;
+      const nextOffset = offset + 8 + length + (length % 2);
+      if (nextOffset <= offset || nextOffset > fileBuffer.length) break;
+      offset = nextOffset;
+    }
+  }
+
+  return false;
+}
+
+export function validateImageBytes(fileBuffer: Buffer, declaredMimeType?: string) {
+  const detectedMimeType = detectImageMimeType(fileBuffer);
+  if (!detectedMimeType) {
+    throw new LocalStorageError("지원되지 않는 이미지 형식입니다.", 400);
+  }
+  if (declaredMimeType && declaredMimeType !== detectedMimeType) {
+    throw new LocalStorageError("파일 형식 위변조가 감지되었습니다.", 400);
+  }
+  if (hasSensitiveMetadata(fileBuffer, detectedMimeType)) {
+    throw new LocalStorageError("위치 정보가 포함될 수 있는 이미지 메타데이터는 허용되지 않습니다.", 400);
+  }
+
+  const dimensions = readImageDimensions(fileBuffer, detectedMimeType);
+  if (
+    !dimensions ||
+    dimensions.width < 1 ||
+    dimensions.height < 1 ||
+    dimensions.width > MAX_IMAGE_EDGE ||
+    dimensions.height > MAX_IMAGE_EDGE ||
+    dimensions.width * dimensions.height > MAX_IMAGE_PIXELS
+  ) {
+    throw new LocalStorageError("이미지 해상도가 허용 범위를 벗어났습니다.", 400);
+  }
+
+  return { mimeType: detectedMimeType, ...dimensions };
+}
+
 function parseMeta(raw: string): LocalStoredFileMeta {
   const parsed = JSON.parse(raw) as Partial<LocalStoredFileMeta>;
   if (
@@ -166,7 +322,10 @@ function parseMeta(raw: string): LocalStoredFileMeta {
     ) ||
     !/^[0-9a-f-]+\.(jpg|png|webp)$/i.test(parsed.storedName) ||
     parsed.size < 0 ||
-    parsed.size > MAX_UPLOAD_BYTES
+    parsed.size > MAX_UPLOAD_BYTES ||
+    (parsed.status !== undefined && parsed.status !== "ready" && parsed.status !== "attached") ||
+    (parsed.pointId !== undefined && !UUID_PATTERN.test(parsed.pointId)) ||
+    (parsed.status === "attached" && !parsed.pointId)
   ) {
     throw new LocalStorageError("손상된 파일 메타데이터입니다.", 500);
   }
@@ -176,7 +335,7 @@ function parseMeta(raw: string): LocalStoredFileMeta {
 
 export async function saveLocalUploadedFile(file: File, ownerId: string) {
   if (file.size > MAX_UPLOAD_BYTES) {
-    throw new LocalStorageError("파일 크기는 5MB 이하여야 합니다.", 400);
+    throw new LocalStorageError("최적화된 파일 크기는 10MB 이하여야 합니다.", 400);
   }
 
   if (!ownerId || ownerId.trim().length === 0) {
@@ -188,16 +347,7 @@ export async function saveLocalUploadedFile(file: File, ownerId: string) {
   const fileId = randomUUID();
   const buffer = Buffer.from(await file.arrayBuffer());
 
-  const detectedMimeType = detectImageMimeType(buffer);
-  if (!detectedMimeType) {
-    throw new LocalStorageError("지원되지 않는 이미지 형식입니다.", 400);
-  }
-
-  if (file.type && file.type !== detectedMimeType) {
-    throw new LocalStorageError("파일 형식 위변조가 감지되었습니다.", 400);
-  }
-
-  const mimeType = detectedMimeType;
+  const { mimeType } = validateImageBytes(buffer, file.type || undefined);
   const storedName = toStoredName(fileId, mimeType);
   const safeOriginalName = sanitizeOriginalName(file.name);
 
@@ -214,6 +364,7 @@ export async function saveLocalUploadedFile(file: File, ownerId: string) {
     mimeType,
     size: file.size,
     createdAt: new Date().toISOString(),
+    status: "ready",
   };
 
   try {
@@ -224,6 +375,47 @@ export async function saveLocalUploadedFile(file: File, ownerId: string) {
   }
 
   return meta;
+}
+
+export async function attachLocalUploadedFiles(
+  fileIds: string[],
+  ownerId: string,
+  pointId: string,
+) {
+  if (new Set(fileIds).size !== fileIds.length) {
+    throw new LocalStorageError("중복된 이미지가 포함되어 있습니다.", 400);
+  }
+  if (fileIds.some((fileId) => attachingFileIds.has(fileId))) {
+    throw new LocalStorageError("이미 연결 중인 이미지가 포함되어 있습니다.", 409);
+  }
+
+  fileIds.forEach((fileId) => attachingFileIds.add(fileId));
+  const originals: LocalStoredFileMeta[] = [];
+  const changed: LocalStoredFileMeta[] = [];
+  try {
+    for (const fileId of fileIds) {
+      const meta = await getLocalUploadedFileMeta(fileId);
+      if (!meta || meta.ownerId !== ownerId || (meta.status && meta.status !== "ready")) {
+        throw new LocalStorageError("첨부할 수 없는 이미지가 포함되어 있습니다.", 400);
+      }
+      originals.push(meta);
+    }
+
+    for (const meta of originals) {
+      const next: LocalStoredFileMeta = { ...meta, status: "attached", pointId };
+      await writeFile(getMetaPath(meta.id), JSON.stringify(next), { mode: 0o600 });
+      changed.push(meta);
+    }
+  } catch (error) {
+    await Promise.allSettled(
+      changed.map((meta) =>
+        writeFile(getMetaPath(meta.id), JSON.stringify(meta), { mode: 0o600 }),
+      ),
+    );
+    throw error;
+  } finally {
+    fileIds.forEach((fileId) => attachingFileIds.delete(fileId));
+  }
 }
 
 export async function getLocalUploadedFileMeta(fileId: string) {

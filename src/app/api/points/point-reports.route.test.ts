@@ -56,4 +56,25 @@ describe("point reports route", () => {
     expect(pointDetail.reportCount).toBeGreaterThanOrEqual(5);
     expect(pointDetail.status).toBe("reported");
   });
+
+  it("allows only one report per user and point", async () => {
+    const created = await createPointAs(resolveRequestUserIdMock, "report-owner", 5);
+
+    resolveRequestUserIdMock.mockResolvedValue("same-reporter");
+    const first = await postReport(
+      jsonRequest(`http://localhost/api/points/${created.id}/reports`, "POST", {
+        type: "incorrect_location",
+      }),
+      { params: Promise.resolve({ id: created.id }) },
+    );
+    const duplicate = await postReport(
+      jsonRequest(`http://localhost/api/points/${created.id}/reports`, "POST", {
+        type: "spam",
+      }),
+      { params: Promise.resolve({ id: created.id }) },
+    );
+
+    expect(first.status).toBe(201);
+    expect(duplicate.status).toBe(409);
+  });
 });

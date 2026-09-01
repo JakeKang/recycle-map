@@ -5,6 +5,7 @@ import { resolveClientAddress, isSameOriginRequest } from "@/lib/request-securit
 import { repository } from "@/lib/data-repository";
 import { resolveRequestUserId } from "@/lib/request-user";
 import { reportSchema } from "@/lib/validators";
+import { isUuidParam } from "@/lib/route-params";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(
@@ -16,6 +17,9 @@ export async function POST(
   }
 
   const { id } = await context.params;
+  if (!isUuidParam(id)) {
+    return NextResponse.json({ message: "잘못된 포인트 식별자입니다." }, { status: 400 });
+  }
   const userId = await resolveRequestUserId(request);
   if (!userId) {
     return NextResponse.json(
@@ -30,7 +34,7 @@ export async function POST(
   }
 
   const clientAddress = resolveClientAddress(request);
-  const rateLimit = consumeRateLimit({
+  const rateLimit = await consumeRateLimit({
     key: `reports:create:${userId}:${clientAddress}`,
     windowMs: 60_000,
     max: 20,
@@ -65,6 +69,13 @@ export async function POST(
     type: parsed.data.type,
     reason: parsed.data.reason ?? null,
   });
+
+  if (!created) {
+    return NextResponse.json(
+      { message: "포인트당 신고는 사용자별 1회만 가능합니다." },
+      { status: 409 },
+    );
+  }
 
   return NextResponse.json(created, { status: 201 });
 }

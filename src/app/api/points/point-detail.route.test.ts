@@ -23,8 +23,8 @@ describe("point detail route", () => {
 
   it("GET /api/points/[id] returns 404 for missing point", async () => {
     const response = await getPointById(
-      new NextRequest("http://localhost/api/points/not-found"),
-      { params: Promise.resolve({ id: "not-found" }) },
+      new NextRequest("http://localhost/api/points/b1570f7a-4192-4c0d-8265-b4d1300a58ac"),
+      { params: Promise.resolve({ id: "b1570f7a-4192-4c0d-8265-b4d1300a58ac" }) },
     );
     expect(response.status).toBe(404);
   });

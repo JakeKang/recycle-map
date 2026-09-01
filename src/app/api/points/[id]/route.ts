@@ -6,6 +6,7 @@ import { resolveClientAddress, isSameOriginRequest } from "@/lib/request-securit
 import { repository } from "@/lib/data-repository";
 import { resolveRequestUserId } from "@/lib/request-user";
 import { pointPatchSchema } from "@/lib/validators";
+import { isUuidParam } from "@/lib/route-params";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(
@@ -13,6 +14,9 @@ export async function GET(
   context: { params: Promise<{ id: string }> },
 ) {
   const { id } = await context.params;
+  if (!isUuidParam(id)) {
+    return NextResponse.json({ message: "잘못된 포인트 식별자입니다." }, { status: 400 });
+  }
   const point = await repository.getPoint(id);
   if (!point) {
     return NextResponse.json({ message: "포인트를 찾을 수 없습니다." }, { status: 404 });
@@ -53,6 +57,9 @@ export async function PATCH(
   }
 
   const { id } = await context.params;
+  if (!isUuidParam(id)) {
+    return NextResponse.json({ message: "잘못된 포인트 식별자입니다." }, { status: 400 });
+  }
   const point = await repository.getPoint(id);
   if (!point) {
     return NextResponse.json({ message: "포인트를 찾을 수 없습니다." }, { status: 404 });
@@ -65,7 +72,7 @@ export async function PATCH(
   }
 
   const clientAddress = resolveClientAddress(request);
-  const rateLimit = consumeRateLimit({
+  const rateLimit = await consumeRateLimit({
     key: `points:patch:${userId}:${clientAddress}`,
     windowMs: 60_000,
     max: 30,

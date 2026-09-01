@@ -58,7 +58,10 @@ pnpm dev
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase 프로젝트 URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase 공개 키 |
 | `SUPABASE_SERVICE_ROLE_KEY` | 서버 전용 DB 접근 키. 운영 필수, 클라이언트 노출 금지 |
-| `ADMIN_USER_IDS` | 관리자 사용자 ID의 쉼표 구분 목록 |
+| `ADMIN_USER_IDS` | `google:계정ID`처럼 provider namespace가 포함된 관리자 ID의 쉼표 구분 목록 |
+| `DATA_ENCRYPTION_KEYS` | `v1:base64key` 형식의 AES-256-GCM 키 링. 첫 키가 쓰기용 활성 키 |
+| `UPLOAD_STORAGE_MODE` / `NEXT_PUBLIC_UPLOAD_STORAGE_MODE` | 운영에서는 모두 `supabase` |
+| `TRUST_PROXY` | 신뢰 프록시가 전달 헤더를 정규화할 때만 `true` |
 
 ### 선택 설정
 
@@ -67,7 +70,7 @@ pnpm dev
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Google OAuth |
 | `KAKAO_CLIENT_ID` / `KAKAO_CLIENT_SECRET` | Kakao OAuth |
 | `NAVER_CLIENT_ID` / `NAVER_CLIENT_SECRET` | Naver OAuth |
-| `ENABLE_TEST_ACCOUNTS` / `TEST_ACCOUNT_PASSWORD` | 테스트 계정 로그인. 운영 활성화 시 패스코드 12자 이상 |
+| `ENABLE_TEST_ACCOUNTS` / `TEST_ACCOUNT_PASSWORD` | 개발 전용 테스트 로그인. 운영에서는 코드 수준에서 비활성화 |
 | `NEXT_PUBLIC_MAP_TILE_URL` | Leaflet 타일 URL 템플릿 |
 | `NEXT_PUBLIC_MAP_TILE_ATTRIBUTION` | 타일 저작권 표시 |
 | `LOCAL_STORAGE_ROOT_DIR` | 로컬 사진 저장 루트. 기본값은 프로젝트 `data` 폴더 |
@@ -76,14 +79,34 @@ pnpm dev
 | `ALLOW_DEV_USER_HEADER` / `DEV_USER_HEADER_SECRET` | 비운영 개발 인증 헤더 |
 | `NEXT_PUBLIC_DEV_USER_ID` | 개발 UI와 API 요청에 사용할 개발 사용자 ID |
 
-프로덕션에서는 `ALLOW_DEV_USER_HEADER=false`, `ALLOW_DB_FALLBACK_ON_ERROR=false`, `FORCE_LOCAL_STORE=false`를 유지합니다. 민감 정보는 Git에 커밋하지 않습니다.
+프로덕션에서는 `ALLOW_DEV_USER_HEADER=false`, `ALLOW_DB_FALLBACK_ON_ERROR=false`, `FORCE_LOCAL_STORE=false`, `ENABLE_TEST_ACCOUNTS=false`를 유지합니다. `.env.example`은 이름만 참고하고 비밀값은 배포 플랫폼의 secret store에 보관합니다.
+
+`DATA_ENCRYPTION_KEYS`는 쉼표로 여러 버전을 지정할 수 있습니다. 회전 시 `v2:새키,v1:기존키`처럼 새 키를 맨 앞에 두면 신규 신고 사유·수정 제안·보안 감사 상세는 새 키로 암호화되고 기존 ciphertext는 이전 키로 계속 읽힙니다. 이전 키는 해당 버전의 데이터가 남아 있는 동안 제거하지 않습니다.
+
+OAuth ID namespace 도입 이전 데이터가 있으면 provider를 raw ID만으로 안전하게 추론할 수 없습니다. 운영자는 백업과 기존 인증 로그로 소유자를 확인한 뒤 `legacy_user_identity_mappings(legacy_id, provider, namespaced_id, approved_by)`에 승인 매핑을 먼저 넣어야 합니다. 승인된 사용자만 첫 로그인 시 service-role 전용 DB 함수가 기존 프로필과 소유 데이터를 한 트랜잭션에서 옮깁니다. 매핑이 없거나 기존 ID와 새 ID가 동시에 존재하거나 unique 충돌이 있으면 데이터를 임의 병합하지 않고 로그인을 중단합니다. `ADMIN_USER_IDS`도 배포 전에 새 namespace 형식으로 갱신합니다.
+
+키 도입·회전 후 `pnpm security:reencrypt`로 변경 대상 수를 dry-run 확인하고, 백업 후 `pnpm security:reencrypt -- --apply`로 기존 평문/구버전 ciphertext를 활성 키로 재암호화합니다. 이어서 `pnpm security:verify-encryption`이 성공하는지 확인한 뒤에만 배포를 완료하거나 구버전 키를 제거합니다. 신고 사유·수정 제안·감사 상세뿐 아니라 원본 사진 파일명도 같은 절차의 대상입니다.
+
+실패·중단된 signed upload 객체는 private 상태로 만료되며, 운영 scheduler에서 `pnpm security:cleanup-uploads`를 하루 한 번 실행해 만료된 `pending`/`rejected` 객체와 메타데이터를 제거합니다.
 
 ## 데이터베이스 적용
 
-`supabase/migrations`의 SQL을 시간순으로 적용합니다. v1.0 시민 검증 기능에는 `20260831090000_point_verification_votes.sql`이 필요합니다. 배포 전 다음 명령으로 개발·운영 환경과 마이그레이션 구성을 검사합니다.
+`supabase/migrations`의 SQL을 시간순으로 적용합니다. 운영 보안에는 `20260901090000_security_hardening.sql`까지 모두 필요합니다. 이 migration은 브라우저 DB 역할 권한을 회수하고 service-role API 경계, 신규 중복 차단 trigger, 요청 제한, private 사진 bucket을 구성합니다. 과거 중복 신고는 삭제하지 않으며, 기존 `type=other` 중 엄격한 수정 제안 JSON 형태만 제안 테이블로 옮깁니다. 배포 전 백업을 확보한 뒤 다음 명령으로 개발·운영 환경과 구성을 검사합니다.
 
 ```bash
 pnpm predeploy:check:full
+```
+
+운영 전환은 `DB 백업 → migration 적용 → legacy OAuth 매핑 승인 → 재암호화 --apply → 암호화 verify → 애플리케이션 배포` 순서를 지킵니다. 승인 매핑은 provider를 확인한 사용자만 다음 형태로 등록합니다.
+
+```sql
+insert into public.legacy_user_identity_mappings (
+  legacy_id,
+  provider,
+  namespaced_id,
+  approved_by
+)
+values ('<legacy-id>', 'google', 'google:<legacy-id>', '<operator-id>');
 ```
 
 ## 개발과 품질 검사
@@ -92,13 +115,22 @@ pnpm predeploy:check:full
 pnpm lint             # ESLint
 pnpm test             # Vitest 단위·통합 테스트
 pnpm test:e2e         # Playwright 사용자 흐름
+pnpm test:db-security # 임시 PostGIS DB에 migration/RLS 권한 검증
 pnpm build            # 프로덕션 빌드
 pnpm security:audit   # 운영 의존성 보안 감사
 pnpm perf:smoke       # 반복 가능한 로컬 대량 데이터 성능 스모크
 pnpm smoke:full       # 스모크 + E2E + lint + build
 ```
 
-CI는 pull request와 `main` 푸시에서 릴리스 게이트를 실행합니다.
+CI는 pull request와 `main` 푸시에서 secret scan, 실제 PostGIS migration/RLS 검증, 테스트, build, 의존성 audit를 포함한 릴리스 게이트를 실행합니다.
+
+## 보안 경계
+
+- 브라우저의 Supabase anon 역할은 애플리케이션 테이블에 직접 접근하지 못합니다. 모든 데이터 요청은 NextAuth 세션을 검사하는 API를 통과합니다.
+- 서버는 환경과 관계없이 `SUPABASE_SERVICE_ROLE_KEY`로만 내부 테이블에 접근하며 anon 키로 폴백하지 않습니다. 로컬 메모리 모드는 `FORCE_LOCAL_STORE=true`로 명시합니다.
+- 신고 사유, 수정 제안 payload, 보안 감사 상세, 원본 사진 파일명은 버전형 AES-256-GCM으로 인증 암호화됩니다. 공개 지도 좌표·주소는 서비스 공개 데이터이므로 필드 암호화 대상이 아닙니다.
+- 원본 이미지는 파일당 50MB, 한 번에 150MB까지 선택할 수 있습니다. 브라우저가 긴 변 3840px·10MB 이하 WebP로 재인코딩해 EXIF/GPS를 제거한 뒤 private storage에 직접 업로드합니다.
+- 완료 API가 객체 크기, MIME, 매직바이트, 해상도, 메타데이터, SHA-256을 재검증하며 작성자가 소유한 준비 완료 사진만 위치에 연결할 수 있습니다.
 
 ## 기술 스택
 

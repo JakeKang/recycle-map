@@ -41,6 +41,7 @@ const requiredMigrationFiles = [
   "supabase/migrations/20260309162000_test_account_policies.sql",
   "supabase/migrations/20260309170000_delete_policies.sql",
   "supabase/migrations/20260831090000_point_verification_votes.sql",
+  "supabase/migrations/20260901090000_security_hardening.sql",
 ];
 
 function parseEnvFile(content) {
@@ -87,6 +88,21 @@ function isPlaceholderValue(value) {
 
 function isStrongSecret(value) {
   return value.length >= 32;
+}
+
+function isValidEncryptionKeyRing(value) {
+  const entries = value.split(",").filter(Boolean);
+  const versions = entries.map((entry) => entry.slice(0, entry.indexOf(":")));
+  return (
+    entries.length > 0 &&
+    new Set(versions).size === versions.length &&
+    entries.every((entry) => {
+      const separator = entry.indexOf(":");
+      const version = entry.slice(0, separator);
+      const encoded = entry.slice(separator + 1);
+      return /^v[1-9][0-9]*$/.test(version) && Buffer.from(encoded, "base64").length === 32;
+    })
+  );
 }
 
 const errors = [];
@@ -157,6 +173,12 @@ function validateDevelopment(envMap) {
   const forceLocalStore = envMap.get("FORCE_LOCAL_STORE");
   if (forceLocalStore !== "true") {
     warn(".env.development: FORCE_LOCAL_STORE=true 권장 (로컬 검증 일관성)");
+    if (!(envMap.get("SUPABASE_SERVICE_ROLE_KEY") ?? "")) {
+      fail(".env.development: Supabase 사용 시 SUPABASE_SERVICE_ROLE_KEY가 필요합니다.");
+    }
+    if (!isValidEncryptionKeyRing(envMap.get("DATA_ENCRYPTION_KEYS") ?? "")) {
+      fail(".env.development: Supabase 사용 시 DATA_ENCRYPTION_KEYS가 필요합니다.");
+    }
   }
 }
 
@@ -180,6 +202,15 @@ function validateProduction(envMap) {
   const allowDbFallback = envMap.get("ALLOW_DB_FALLBACK_ON_ERROR") ?? "false";
   const forceLocalStore = envMap.get("FORCE_LOCAL_STORE") ?? "false";
   const serviceRoleKey = envMap.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  const supabaseUrl = envMap.get("NEXT_PUBLIC_SUPABASE_URL") ?? "";
+  const adminUserIds = (envMap.get("ADMIN_USER_IDS") ?? "")
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean);
+  const encryptionKeys = envMap.get("DATA_ENCRYPTION_KEYS") ?? "";
+  const uploadStorageMode = envMap.get("UPLOAD_STORAGE_MODE") ?? "";
+  const publicUploadStorageMode = envMap.get("NEXT_PUBLIC_UPLOAD_STORAGE_MODE") ?? "";
+  const trustProxy = envMap.get("TRUST_PROXY") ?? "";
 
   if (allowDevHeader !== "false") {
     fail(".env.production: ALLOW_DEV_USER_HEADER는 false여야 합니다.");
@@ -196,14 +227,47 @@ function validateProduction(envMap) {
     pass(".env.production: SUPABASE_SERVICE_ROLE_KEY 설정됨");
   }
 
-  const enableTestAccounts = envMap.get("ENABLE_TEST_ACCOUNTS") ?? "false";
-  if (enableTestAccounts === "true") {
-    const testPassword = envMap.get("TEST_ACCOUNT_PASSWORD") ?? "";
-    if (testPassword.length < 12) {
-      fail(".env.production: ENABLE_TEST_ACCOUNTS=true 인 경우 TEST_ACCOUNT_PASSWORD는 최소 12자 이상이어야 합니다.");
-    } else {
-      pass(".env.production: 테스트 계정 비밀번호 길이 정책 통과");
+  try {
+    const parsedSupabaseUrl = new URL(supabaseUrl);
+    if (parsedSupabaseUrl.protocol !== "https:") {
+      fail(".env.production: NEXT_PUBLIC_SUPABASE_URL은 HTTPS여야 합니다.");
     }
+  } catch {
+    fail(".env.production: NEXT_PUBLIC_SUPABASE_URL이 유효한 URL이 아닙니다.");
+  }
+
+  if (adminUserIds.length === 0) {
+    fail(".env.production: ADMIN_USER_IDS를 명시적으로 설정해야 합니다.");
+  } else if (adminUserIds.some((id) => ["admin", "admin-user", "test-admin", "test-owner"].includes(id))) {
+    fail(".env.production: 기본/테스트 관리자 ID를 사용할 수 없습니다.");
+  } else if (
+    adminUserIds.some(
+      (id) =>
+        !/^(google|kakao|naver):[^:]+$/.test(id) &&
+        !/^sha256:[0-9a-f]{64}$/.test(id),
+    )
+  ) {
+    fail(".env.production: 관리자 ID는 provider:providerAccountId 형식이어야 합니다.");
+  } else {
+    pass(".env.production: 관리자 ID fail-closed 설정 통과");
+  }
+
+  if (!isValidEncryptionKeyRing(encryptionKeys)) {
+    fail(".env.production: DATA_ENCRYPTION_KEYS에 버전이 지정된 32바이트 키가 필요합니다.");
+  } else {
+    pass(".env.production: 데이터 암호화 키 설정 통과");
+  }
+
+  if (uploadStorageMode !== "supabase" || publicUploadStorageMode !== "supabase") {
+    fail(".env.production: 운영 업로드 저장소 모드는 서버/클라이언트 모두 supabase여야 합니다.");
+  }
+  if (trustProxy !== "true" && trustProxy !== "false") {
+    fail(".env.production: TRUST_PROXY를 true 또는 false로 명시해야 합니다.");
+  }
+
+  const enableTestAccounts = envMap.get("ENABLE_TEST_ACCOUNTS") ?? "false";
+  if (enableTestAccounts !== "false") {
+    fail(".env.production: 테스트 계정은 반드시 비활성화해야 합니다.");
   }
 }
 

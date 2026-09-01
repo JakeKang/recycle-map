@@ -52,6 +52,15 @@ describe("point suggestions route", () => {
     );
     expect(success.status).toBe(201);
 
+    resolveRequestUserIdMock.mockResolvedValueOnce("reviewer-user");
+    const duplicate = await postSuggestion(
+      jsonRequest(`http://localhost/api/points/${createdPoint.id}/suggestions`, "POST", {
+        category: "battery",
+      }),
+      { params: Promise.resolve({ id: createdPoint.id }) },
+    );
+    expect(duplicate.status).toBe(409);
+
     const list = await getSuggestions(
       new NextRequest(`http://localhost/api/points/${createdPoint.id}/suggestions`),
       { params: Promise.resolve({ id: createdPoint.id }) },

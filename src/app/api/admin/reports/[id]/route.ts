@@ -5,6 +5,8 @@ import { consumeRateLimit } from "@/lib/rate-limit";
 import { isSameOriginRequest, resolveClientAddress } from "@/lib/request-security";
 import { isAdminUserId, resolveRequestUserId } from "@/lib/request-user";
 import { adminReportDecisionSchema } from "@/lib/validators";
+import { isUuidParam } from "@/lib/route-params";
+import { recordSecurityAuditEvent } from "@/lib/security-audit";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function PATCH(
@@ -24,7 +26,7 @@ export async function PATCH(
   }
 
   const clientAddress = resolveClientAddress(request);
-  const rateLimit = consumeRateLimit({
+  const rateLimit = await consumeRateLimit({
     key: `admin:reports:patch:${userId}:${clientAddress}`,
     windowMs: 60_000,
     max: 60,
@@ -50,6 +52,9 @@ export async function PATCH(
   }
 
   const { id } = await context.params;
+  if (!isUuidParam(id)) {
+    return NextResponse.json({ message: "잘못된 신고 식별자입니다." }, { status: 400 });
+  }
   const updated = await repository.updateReportStatus(id, parsed.data.status);
   if (!updated) {
     return NextResponse.json({ message: "신고를 찾을 수 없습니다." }, { status: 404 });
@@ -58,6 +63,15 @@ export async function PATCH(
   if (parsed.data.status === "resolved" && updated.type === "no_longer_exists") {
     await repository.patchPoint(updated.pointId, { status: "inactive" });
   }
+
+  await recordSecurityAuditEvent({
+    actorId: userId,
+    action: "report.moderate",
+    targetType: "report",
+    targetId: id,
+    outcome: "success",
+    details: { status: parsed.data.status, type: updated.type },
+  });
 
   return NextResponse.json(updated);
 }
